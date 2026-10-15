@@ -1,0 +1,89 @@
+/* ---------- the Ball: multi-scene night ---------- */
+const BALL_STAGES = 5;
+function ballFoe(S) { const lo = KIDS.slice().sort((a, b) => S.rel[a] - S.rel[b])[0]; return S.rel[lo] < -10 ? lo : null; }
+function ballFriend(S) { return S.ballDate || knownRank(S, KIDS)[0]; }
+function ballScene(S, st) {
+  const ctx = makeCtx(S, 'ball' + st, ''); const fr = ballFriend(S); const foe = ballFoe(S);
+  ctx.T = st === 2 ? (foe || ctx.T) : ctx.T;
+  const dateTxt = S.ballDate ? S.ballDate + ' is with you tonight.' : 'You came without a date.';
+  const mk = (title, desc, rows, who) => ({ kind: 'ball', st, title, desc, ctx, who: who || [], choices: rows.map((r, i) => Object.assign({ l: 'ABCDEF'[i], x: r[0], fx: fxs(r[1] || '') }, r[2] || {})) });
+  if (st === 0) {
+    const lend = knownRank(S, KIDS).find(n => S.rel[n] >= 20);
+    return mk('The Ball — What to wear', 'Ball night. The gym is full of paper lanterns and the smell of hairspray. Nobody should miss tonight over money, and everybody knows it. ' + dateTxt, [
+      ['Buy a new outfit or accessory ($15)', 'm-15;p+1;f:BALL_OUTFIT_BOUGHT', { dis: S.money < 15 ? 'Needs $15' : null }],
+      ['Wear something you already own, and own it', 'f:BALL_OWN_OUTFIT;p+0'],
+      lend ? ['Borrow an outfit from ' + lend, 'r:' + lend + '+3;f:BALL_BORROWED'] : ['Borrow something from your sibling or parent', 'f:BALL_BORROWED'],
+      ['Take something from the free swap table the parents set up', 'f:BALL_SWAP_TABLE;f:BALL_INCLUSIVE_PLAN?.0'],
+      ['Skip the outfit: help decorate and set up instead', 'r:G+3;f:BALL_BACKSTAGE;f:BALL_SETUP_HELP'],
+    ]);
+  }
+  if (st === 1) {
+    const other = ctx.T === fr ? ctx.C : ctx.T;
+    return mk('The Ball — The dance floor', 'The music starts. Some people dance, some hover by the snack table, and a few stand at the edge pretending to read their phones. ' + dateTxt, [
+      ['Ask ' + fr + ' to dance', '', { dance: fr }],
+      ['Pull a shy classmate (' + other + ') into the group dance', 'r:' + other + '+6;p-1?.4;f:INCLUDED_SOMEONE;f:BALL_INCLUDED_ONE'],
+      ['Request the song everybody knows and lead the floor', 'p+2;r:G+1;f:BALL_CROWD_PLEASER'],
+      ['Hang by the snack table with friends', 'r:' + fr + '+3'],
+      ['Stay near the wall and enjoy watching', 'f:BALL_WALLFLOWER'],
+    ], [{ role: 'Around you', names: [fr, other] }]);
+  }
+  if (st === 2) {
+    const T = ctx.T;
+    return mk('The Ball — Whispers at the punch table', (foe ? foe + ' is across the room and the air feels tense. ' : '') + 'Someone starts a rumour about ' + T + ', and heads turn toward you to see what you will do.', [
+      ['Add a juicy detail to the story', '', { gossip: T }],
+      ['Shut it down: "That is not our business."', 'r:' + T + '+6;p-1?.4;f:STOOD_UP;f:PUBLIC_ACCOUNTABILITY?.0'],
+      ['Blame someone else when the talk comes back to you', '', { blame: T }],
+      ['Own your part in an old mess, in front of everyone', 'r:' + T + '+5;p-1;f:PUBLIC_ACCOUNTABILITY;f:APOLOGIZED_SPECIFIC', { req: (S.gossip > 0 || F(S, 'GOSSIP') || F(S, 'PUBLIC_JAB') || F(S, 'BLAME_SHIFT')) ? null : 'Needs an old mistake to own' }],
+      ['Walk away from it', ''],
+    ], [{ role: 'Rumour about', names: [T] }]);
+  }
+  if (st === 3) {
+    const sp = knownRank(S, KIDS).slice(0, 3);
+    return mk('The Ball — Photos and spotlight', 'The photographer waves everyone over, and the principal announces a Class Spirit award with a short speech. The spotlight swings around the room.', [
+      ['Gather everyone for one big group photo', 'r:G+3;f:INCLUSIVE_PHOTO;f:SINCERE_YEARBOOK?.0'],
+      ['Pose only with the popular group', 'p+2;r:G-3;f:PHOTO_CLIQUE'],
+      ['Accept the award and thank everyone by name', 'p+1;r:TOP+3;f:SHARED_SPOTLIGHT', { req: S.pop >= 55 || S.grade >= 75 ? null : 'Needs Pop 55 or Grade 75' }],
+      ['Accept the award and take all the credit', 'p+3;r:G-5;f:STOLE_CREDIT;gos+0', { req: S.pop >= 55 || S.grade >= 75 ? null : 'Needs Pop 55 or Grade 75' }],
+      ['Skip the spotlight and support a friend quietly', 'r:' + sp[0] + '+4;f:QUIET_SUPPORT'],
+    ]);
+  }
+  const hurt = Object.keys(S.hurt || {}).filter(n => S.hurt[n] > 0 && S.rel[n] < 30)[0] || foe;
+  return mk('The Ball — Last dance', 'The lights dim. The last slow song fades. People drift to the coats. ' + (hurt ? hurt + ' is putting a coat on, alone.' : 'Everyone is putting coats on.'), [
+    [hurt ? 'Apologize to ' + hurt + ' before leaving' : 'Thank the organizers before leaving', hurt ? 'r:' + hurt + '+8;f:APOLOGIZED_SPECIFIC;f:BALL_REPAIR;f:LAST_DAY_APOLOGY' : 'r:G+3', { appol: hurt }],
+    ['Walk ' + ballFriend(S) + ' home and say thank you', 'r:' + ballFriend(S) + '+5'],
+    ['Stay and help clean up the gym', 'r:G+3;f:BALL_CLEANUP;f:BALL_BACKSTAGE'],
+    ['Smooth over what you said earlier and hide the contradictions', '', { hide: true }],
+    ['Slip out quietly', ''],
+  ]);
+}
+function ballEnd(S) { S.pend = null; S.phase = 'free'; }
+function chooseBallScene(S, c, ev) {
+  const ch = [], lines = []; const ctx = ev.ctx;
+  const witnesses = n => KIDS.filter(k => k !== n && (S.rel[k] > 0 || (LINKS[n] || []).some(l => l[0] === k))).slice(0, 4);
+  if (c.dance) {
+    const n = c.dance; const chance = S.rel[n] >= 60 ? 95 : clamp(55 + S.rel[n], 10, 90);
+    if (rnd(S) * 100 < chance) { addRel(S, n, 6, ch); addPop(S, 1, ch); setFlag(S, 'BALL_DANCE'); lines.push(n + ' laughed and took your hand. A song later you were both out of breath.'); }
+    else { addRel(S, n, 1, ch); lines.push(n + ' smiled and said maybe the next one. No hard feelings.'); }
+  } else if (c.gossip) {
+    const T = c.gossip; applyFx(S, fxs('gos+1'), ctx, ch);
+    if (rnd(S) < 0.55) {
+      addRel(S, T, -10, ch); let tot = 0;
+      (LINKS[T] || []).filter(l => l[1] >= 2 && CH[l[0]].role === 'kid').forEach(([o]) => { if (tot < 30) { addRel(S, o, -5, ch, false, true); tot += 5; } });
+      addPop(S, 2, ch); setFlag(S, 'GOSSIP'); lines.push('It reached ' + T + ' before the song ended. Close friends took sides.');
+    } else { addPop(S, 1, ch); lines.push('The story fizzled. Nobody repeated it.'); }
+  } else if (c.blame) {
+    const T = c.blame; setFlag(S, 'BLAME_SHIFT');
+    if (rnd(S) < 0.3) {
+      addRel(S, T, -15, ch); let tot = 0; witnesses(T).forEach(w => { if (tot < 30) { addRel(S, w, -10, ch, false, true); tot += 10; } });
+      addPop(S, -3, ch); setFlag(S, 'HYPOCRISY'); lines.push('Someone had the screenshot. The blame bounced right back onto you.');
+    } else { addPop(S, 1, ch); lines.push('The blame stuck to someone else. It feels worse than you expected.'); }
+  } else if (c.hide) {
+    if (rnd(S) < 0.5) { let tot = 0; witnesses(ev.ctx.T).forEach(w => { if (tot < 80) { addRel(S, w, -10, ch, false, true); tot += 10; } }); addPop(S, -2, ch); setFlag(S, 'HYPOCRISY'); lines.push('Two people compared notes. The versions did not match.'); }
+    else lines.push('Nobody connected the dots tonight.');
+  } else applyFx(S, c.fx, ctx, ch);
+  if (c.appol) { S.apol = S.apol || {}; S.apol[c.appol] = (S.apol[c.appol] || 0) + 1; }
+  logAdd(S, ev.title + ' — ' + stripEnd(c.x), ch);
+  if (ev.st >= BALL_STAGES - 1) { ballEnd(S); }
+  else { S.pend = { kind: 'ball', st: ev.st + 1 }; S.phase = 'event'; }
+  return result(ch, lines);
+}
