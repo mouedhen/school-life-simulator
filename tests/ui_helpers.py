@@ -1,6 +1,6 @@
 import os, pathlib
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-URL = 'file://' + str(ROOT / 'dist' / 'index.html')
+URL = os.environ.get('SLS_URL') or 'file://' + str(ROOT / 'dist' / 'index.html')
 
 def launch(p):
     exe = os.environ.get('CHROMIUM')
