@@ -1339,21 +1339,29 @@ function gamesHtml() {
   const off = E.phoneOff(S);
   const card = id => { const i = PGI[id]; const played = !!S.today['pg_' + id]; const ready = S.di - ((S.pgLast && S.pgLast[id] != null) ? S.pgLast[id] : -99) >= E.PG_GAP[id];
     return `<div class="card" style="margin:0 0 10px"><div class="row" style="justify-content:space-between;align-items:center"><b>${i[0]} ${LANG === 'fr' ? i[2] : i[1]}</b><span class="small muted">${played ? '✔ ' + L('played today', 'joué aujourd\'hui') : ready ? '★ ' + L('prize ready', 'prix prêt') : L('just for fun', 'pour le plaisir')}</span></div><p class="small muted" style="margin:6px 0 8px">${LANG === 'fr' ? i[4] : i[3]}</p><button class="btn small ${played || off ? 'dis' : 'primary'}" data-act="pgstart" data-v="${id}" ${played ? `data-why="${ea(L('You already played that today.', 'Tu as déjà joué à ça aujourd\'hui.'))}"` : off ? `data-why="${ea(off)}"` : ''}>${L('Play', 'Jouer')}</button></div>`; };
-  return head(L('Games', 'Jeux'), '') + `<button class="btn ghost small" data-act="phback">← ${L('Chats', 'Discussions')}</button><p class="small muted" style="margin:10px 0">${L('One round of each game per day. Prizes are small and come back every few days.', 'Une partie de chaque jeu par jour. Les prix sont petits et reviennent tous les quelques jours.')}</p>${['reply', 'who', 'emoji', 'tap'].map(card).join('')}`;
+  return head(L('Games', 'Jeux'), '') + `${phBack()}<p class="small muted" style="margin:10px 0">${L('One round of each game per day. Prizes are small and come back every few days.', 'Une partie de chaque jeu par jour. Les prix sont petits et reviennent tous les quelques jours.')}</p>${['reply', 'who', 'emoji', 'tap'].map(card).join('')}`;
 }
 
 const GCL = { g_hi: ['Post a friendly message', 'Poster un message sympa'], g_joke: ['Post a joke', 'Poster une blague'], g_notes: ['Ask if anyone has notes', 'Demander si quelqu\'un a des notes'], f_hi: ['Say hi to everyone', 'Dire bonjour à tout le monde'], f_photo: ['Share a photo from today', 'Partager une photo du jour'], f_help: ['Ask who can help with homework', 'Demander qui peut aider pour les devoirs'] };
 const GCN = { '#class': ['Class group chat', 'Groupe de la classe', '👥'], '#fam': ['Family chat', 'Discussion familiale', '🏠'] };
-function groupHtml(key, offB) {
-  const P = E.phoneOf(S); const th = P.th[key] || []; P.un[key] = 0;
+/* pieces shared by the phone screens */
+const phBack = () => `<button class="btn ghost small" data-act="phback">← ${L('Chats', 'Discussions')}</button>`;
+const textsLeft = () => `${L('Texts left today', 'Textos restants aujourd\'hui')}: <b>${phLeft()}/${E.PHONE_CAP}</b>`;
+const threadTop = () => `<div class="row" style="justify-content:space-between;align-items:center">${phBack()}<span class="small muted">${textsLeft()}</span></div>`;
+// the bubbles of one thread; the last unanswered message gets its quick-reply buttons. senders: show who wrote (group chats)
+function threadHtml(th, senders) {
   let lastQ = -1; th.forEach((m, i) => { if (m.q && !m.done) lastQ = i; });
   const bub = (m, i) => {
     if (m.f === 'sys') return (m.t || (m.c && m.c.length)) ? `<div class="bub sys">${m.t ? esc(m.t) : ''}${m.c && m.c.length ? chips(m.c, 1) : ''}</div>` : '';
-    return `<div class="bub ${m.f}">${m.f === 'them' && m.s ? `<b class="snd">${esc(m.s)}</b>` : ''}${esc(m.t)}</div>` + (i === lastQ ? `<div class="qr">${m.q.map((q, k) => `<button class="btn small" data-act="phreply" data-v="${k}">${esc(q[0])}</button>`).join('')}</div>` : '');
+    return `<div class="bub ${m.f}">${senders && m.f === 'them' && m.s ? `<b class="snd">${esc(m.s)}</b>` : ''}${esc(m.t)}</div>` + (i === lastQ ? `<div class="qr">${m.q.map((q, k) => `<button class="btn small" data-act="phreply" data-v="${k}">${esc(q[0])}</button>`).join('')}</div>` : '');
   };
+  return th.map(bub).join('');
+}
+function groupHtml(key, offB) {
+  const P = E.phoneOf(S); const th = P.th[key] || []; P.un[key] = 0;
   const acts = E.phoneGroupList(S, key);
-  return head(LX(GCN[key]), '') + offB + `<div class="row" style="justify-content:space-between;align-items:center"><button class="btn ghost small" data-act="phback">← ${L('Chats', 'Discussions')}</button><span class="small muted">${L('Texts left today', 'Textos restants aujourd\'hui')}: <b>${phLeft()}/${E.PHONE_CAP}</b></span></div>
-  <div class="phthread" id="phthread">${th.length ? th.map(bub).join('') : `<p class="small muted" style="margin:6px 0">${L('Quiet in here. Say something.', 'C\'est calme ici. Dis quelque chose.')}</p>`}</div>
+  return head(LX(GCN[key]), '') + offB + `${threadTop()}
+  <div class="phthread" id="phthread">${th.length ? threadHtml(th, true) : `<p class="small muted" style="margin:6px 0">${L('Quiet in here. Say something.', 'C\'est calme ici. Dis quelque chose.')}</p>`}</div>
   <div class="ib">${acts.map(a => `<button class="btn small ${a.ok ? '' : 'dis'}" data-act="phgact" data-v="${a.id}" ${a.ok ? '' : `data-why="${ea(a.why)}"`}>${LX(GCL[a.id])}</button>`).join('')}</div>`;
 }
 
@@ -1365,20 +1373,15 @@ function phoneHtml() {
   if (nm === '?') {
     P.unkSeen = 1;
     const bub = (c, x) => `<div class="bub them">${x}</div>`;
-    return head(L('Unknown number', 'Numéro inconnu'), '') + `<button class="btn ghost small" data-act="phback">← ${L('Chats', 'Discussions')}</button>
+    return head(L('Unknown number', 'Numéro inconnu'), '') + `${phBack()}
     <div class="phthread">${bub('', esc(L('Hey. Can you see this?', 'Hé. Tu vois ça ?')))}${bub('', inkHtml('k9', L('Move over the pale words. That is how I reach you.', 'Passe sur les mots pâles. C\'est ainsi que je te joins.')))}${bub('', inkHtml('k10', L('MC has never typed a single reply. Only you have.', 'MC n\'a jamais tapé une seule réponse. Il n\'y a que toi.')))}</div>
     <p class="small muted" style="margin:8px 0 0">${L('This number cannot receive replies.', 'Ce numéro ne peut pas recevoir de réponses.')}</p>`;
   }
   if (nm) {
-    const c = CH[nm]; const th = P.th[nm] || []; P.un[nm] = 0;
-    let lastQ = -1; th.forEach((m, i) => { if (m.q && !m.done) lastQ = i; });
-    const bub = (m, i) => {
-      if (m.f === 'sys') return (m.t || (m.c && m.c.length)) ? `<div class="bub sys">${m.t ? esc(m.t) : ''}${m.c && m.c.length ? chips(m.c, 1) : ''}</div>` : '';
-      return `<div class="bub ${m.f}">${esc(m.t)}</div>` + (i === lastQ ? `<div class="qr">${m.q.map((q, k) => `<button class="btn small" data-act="phreply" data-v="${k}">${esc(q[0])}</button>`).join('')}</div>` : '');
-    };
+    const th = P.th[nm] || []; P.un[nm] = 0;
     const acts = E.phoneList(S, nm);
-    return head(nm, '') + offB + `<div class="row" style="justify-content:space-between;align-items:center"><button class="btn ghost small" data-act="phback">← ${L('Chats', 'Discussions')}</button><span class="small muted">${L('Texts left today', 'Textos restants aujourd\'hui')}: <b>${phLeft()}/${E.PHONE_CAP}</b></span></div>
-    <div class="phthread" id="phthread">${th.length ? th.map(bub).join('') : `<p class="small muted" style="margin:6px 0">${L('No messages yet. Say something.', 'Aucun message pour l\'instant. Dis quelque chose.')}</p>`}</div>
+    return head(nm, '') + offB + `${threadTop()}
+    <div class="phthread" id="phthread">${th.length ? threadHtml(th, false) : `<p class="small muted" style="margin:6px 0">${L('No messages yet. Say something.', 'Aucun message pour l\'instant. Dis quelque chose.')}</p>`}</div>
     <div class="ib">${acts.map(a => `<button class="btn small ${a.ok ? '' : 'dis'}" data-act="phact" data-v="${a.id}" ${a.ok ? '' : `data-why="${ea(a.why)}"`}>${LX(PHL[a.id])}</button>`).join('')}</div>
     <div class="row" style="margin-top:10px"><button class="btn ghost small" data-act="person" data-v="${ea(nm)}">${L('Open profile', 'Voir le profil')}</button></div>`;
   }
@@ -1390,7 +1393,7 @@ function phoneHtml() {
   const unk = unkOn() ? `<button class="phrow" data-act="phopen" data-v="?"><span class="av unk">?</span><div class="pmid"><div class="nm">${L('Unknown number', 'Numéro inconnu')}</div><div class="small muted phprev">${esc(L('Hey. Can you see this?', 'Hé. Tu vois ça ?'))}</div></div>${unkNew() ? '<span class="phbadge">1</span>' : ''}</button>` : '';
   const grow = key => { const th = P.th[key] || []; const m = th[th.length - 1]; const u = P.un[key] || 0; const p = m ? ((m.f === 'me' ? L('You: ', 'Toi : ') : m.s ? m.s + ': ' : '') + (m.t || '')) : ''; return `<button class="phrow" data-act="phopen" data-v="${key}"><span class="av unk">${GCN[key][2]}</span><div class="pmid"><div class="nm">${esc(LX(GCN[key]))}</div><div class="small muted phprev">${esc(p)}</div></div>${u ? `<span class="phbadge">${u}</span>` : ''}</button>`; };
   const gm = `<button class="phrow" data-act="phgames"><span class="av unk">🎮</span><div class="pmid"><div class="nm">${L('Games', 'Jeux')}</div><div class="small muted phprev">${L('Four quick games', 'Quatre jeux rapides')}</div></div></button>`;
-  return head(L('Phone', 'Téléphone'), '') + offB + `<p class="small muted" style="margin:-4px 0 8px">${L('Texts left today', 'Textos restants aujourd\'hui')}: <b>${phLeft()}/${E.PHONE_CAP}</b> · ${L('In-person actions use time blocks; texts are free but limited.', 'Les actions en personne utilisent des blocs de temps ; les textos sont gratuits mais limités.')}</p>
+  return head(L('Phone', 'Téléphone'), '') + offB + `<p class="small muted" style="margin:-4px 0 8px">${textsLeft()} · ${L('In-person actions use time blocks; texts are free but limited.', 'Les actions en personne utilisent des blocs de temps ; les textos sont gratuits mais limités.')}</p>
   <div class="card" style="padding:4px 12px">${unk}${S.di >= 1 ? grow('#class') + grow('#fam') : ''}${gm}${act.map(row).join('')}${act.length && rest.length ? `<div class="small muted" style="padding:8px 0 2px">${L('Contacts', 'Contacts')}</div>` : ''}${rest.map(row).join('')}</div>`;
 }
 function showPhone(name) { if (!S || S.over) return; V.ph = { name: name || null }; V.person = null; V.sub = null; V.res = null; E.phoneOf(S).ping = null; V.modal = phoneHtml; renderModal(); phScroll(); }
