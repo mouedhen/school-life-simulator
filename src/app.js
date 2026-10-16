@@ -4483,63 +4483,231 @@ function gamesHtml() {
 
 /* ---------- phone: chats and threads ---------- */
 /* group chat button labels [EN, FR] and group names [EN, FR, icon] */
-const GCL = { g_hi: ['Post a friendly message', 'Poster un message sympa'], g_joke: ['Post a joke', 'Poster une blague'], g_notes: ['Ask if anyone has notes', 'Demander si quelqu\'un a des notes'], f_hi: ['Say hi to everyone', 'Dire bonjour à tout le monde'], f_photo: ['Share a photo from today', 'Partager une photo du jour'], f_help: ['Ask who can help with homework', 'Demander qui peut aider pour les devoirs'] };
-const GCN = { '#class': ['Class group chat', 'Groupe de la classe', '👥'], '#fam': ['Family chat', 'Discussion familiale', '🏠'] };
+const GCL = {
+  g_hi: ['Post a friendly message', 'Poster un message sympa'],
+  g_joke: ['Post a joke', 'Poster une blague'],
+  g_notes: ['Ask if anyone has notes', "Demander si quelqu'un a des notes"],
+  f_hi: ['Say hi to everyone', 'Dire bonjour à tout le monde'],
+  f_photo: ['Share a photo from today', 'Partager une photo du jour'],
+  f_help: ['Ask who can help with homework', 'Demander qui peut aider pour les devoirs'],
+};
+const GCN = {
+  '#class': ['Class group chat', 'Groupe de la classe', '👥'],
+  '#fam': ['Family chat', 'Discussion familiale', '🏠'],
+};
 /* pieces shared by the phone screens */
 const phBack = () => `<button class="btn ghost small" data-act="phback">← ${L('Chats', 'Discussions')}</button>`;
-const textsLeft = () => `${L('Texts left today', 'Textos restants aujourd\'hui')}: <b>${phLeft()}/${E.PHONE_CAP}</b>`;
-const threadTop = () => `<div class="row" style="justify-content:space-between;align-items:center">${phBack()}<span class="small muted">${textsLeft()}</span></div>`;
+const textsLeft = () => `${L('Texts left today', "Textos restants aujourd'hui")}: <b>${phLeft()}/${E.PHONE_CAP}</b>`;
+const threadTop = () =>
+  `<div class="row" style="justify-content:space-between;align-items:center">${phBack()}` +
+  `<span class="small muted">${textsLeft()}</span></div>`;
 // the bubbles of one thread; the last unanswered message gets its quick-reply buttons. senders: show who wrote (group chats)
 function threadHtml(th, senders) {
-  let lastQ = -1; th.forEach((m, i) => { if (m.q && !m.done) lastQ = i; });
+  let lastQ = -1;
+  th.forEach((m, i) => {
+    if (m.q && !m.done) lastQ = i;
+  });
   const bub = (m, i) => {
-    if (m.f === 'sys') return (m.t || (m.c && m.c.length)) ? `<div class="bub sys">${m.t ? esc(m.t) : ''}${m.c && m.c.length ? chips(m.c, 1) : ''}</div>` : '';
-    return `<div class="bub ${m.f}">${senders && m.f === 'them' && m.s ? `<b class="snd">${esc(m.s)}</b>` : ''}${esc(m.t)}</div>` + (i === lastQ ? `<div class="qr">${m.q.map((q, k) => `<button class="btn small" data-act="phreply" data-v="${k}">${esc(q[0])}</button>`).join('')}</div>` : '');
+    if (m.f === 'sys')
+      return m.t || (m.c && m.c.length)
+        ? `<div class="bub sys">${m.t ? esc(m.t) : ''}${m.c && m.c.length ? chips(m.c, 1) : ''}</div>`
+        : '';
+    return (
+      `<div class="bub ${m.f}">` +
+      (senders && m.f === 'them' && m.s ? `<b class="snd">${esc(m.s)}</b>` : '') +
+      `${esc(m.t)}</div>` +
+      (i === lastQ
+        ? `<div class="qr">` +
+          m.q
+            .map((q, k) => `<button class="btn small" data-act="phreply" data-v="${k}">${esc(q[0])}</button>`)
+            .join('') +
+          `</div>`
+        : '')
+    );
   };
   return th.map(bub).join('');
 }
 function groupHtml(key, offB) {
-  const P = E.phoneOf(S); const th = P.th[key] || []; P.un[key] = 0;
+  const P = E.phoneOf(S);
+  const th = P.th[key] || [];
+  P.un[key] = 0;
   const acts = E.phoneGroupList(S, key);
-  return head(LX(GCN[key]), '') + offB + `${threadTop()}
-  <div class="phthread" id="phthread">${th.length ? threadHtml(th, true) : `<p class="small muted" style="margin:6px 0">${L('Quiet in here. Say something.', 'C\'est calme ici. Dis quelque chose.')}</p>`}</div>
-  <div class="ib">${acts.map(a => `<button class="btn small ${a.ok ? '' : 'dis'}" data-act="phgact" data-v="${a.id}" ${a.ok ? '' : `data-why="${ea(a.why)}"`}>${LX(GCL[a.id])}</button>`).join('')}</div>`;
+  return (
+    head(LX(GCN[key]), '') +
+    offB +
+    (`${threadTop()}\n  <div class="phthread" id="phthread">` +
+      (th.length
+        ? threadHtml(th, true)
+        : `<p class="small muted" style="margin:6px 0">` +
+          L('Quiet in here. Say something.', "C'est calme ici. Dis quelque chose.") +
+          `</p>`) +
+      `</div>\n  <div class="ib">` +
+      acts
+        .map(
+          a =>
+            `<button class="btn small ${a.ok ? '' : 'dis'}" data-act="phgact" data-v="${a.id}" ${a.ok ? '' : `data-why="${ea(a.why)}"`}>` +
+            `${LX(GCL[a.id])}</button>`,
+        )
+        .join('') +
+      `</div>`)
+  );
 }
 
 function phoneHtml() {
-  const P = E.phoneOf(S); const nm = V.ph && V.ph.name; const OFF = E.phoneOff(S); const offB = OFF ? `<div class="warn" style="margin:0 0 10px">📵 ${esc(OFF)} ${esc(L('Talk to people in person today.', 'Parle aux gens en personne aujourd\'hui.'))}</div>` : '';
+  const P = E.phoneOf(S);
+  const nm = V.ph && V.ph.name;
+  const OFF = E.phoneOff(S);
+  const offB = OFF
+    ? `<div class="warn" style="margin:0 0 10px">📵 ${esc(OFF)} ` +
+      esc(L('Talk to people in person today.', "Parle aux gens en personne aujourd'hui.")) +
+      `</div>`
+    : '';
   if (nm === '@games') return gamesHtml();
   if (nm === '@play') return pgHtml();
   if (nm === '#class' || nm === '#fam') return groupHtml(nm, offB);
   if (nm === '?') {
     P.unkSeen = 1;
     const bub = (c, x) => `<div class="bub them">${x}</div>`;
-    return head(L('Unknown number', 'Numéro inconnu'), '') + `${phBack()}
-    <div class="phthread">${bub('', esc(L('Hey. Can you see this?', 'Hé. Tu vois ça ?')))}${bub('', inkHtml('k9', L('Move over the pale words. That is how I reach you.', 'Passe sur les mots pâles. C\'est ainsi que je te joins.')))}${bub('', inkHtml('k10', L('MC has never typed a single reply. Only you have.', 'MC n\'a jamais tapé une seule réponse. Il n\'y a que toi.')))}</div>
-    <p class="small muted" style="margin:8px 0 0">${L('This number cannot receive replies.', 'Ce numéro ne peut pas recevoir de réponses.')}</p>`;
+    return (
+      head(L('Unknown number', 'Numéro inconnu'), '') +
+      (`${phBack()}\n    <div class="phthread">` +
+        bub('', esc(L('Hey. Can you see this?', 'Hé. Tu vois ça ?'))) +
+        bub(
+          '',
+          inkHtml(
+            'k9',
+            L(
+              'Move over the pale words. That is how I reach you.',
+              "Passe sur les mots pâles. C'est ainsi que je te joins.",
+            ),
+          ),
+        ) +
+        bub(
+          '',
+          inkHtml(
+            'k10',
+            L(
+              'MC has never typed a single reply. Only you have.',
+              "MC n'a jamais tapé une seule réponse. Il n'y a que toi.",
+            ),
+          ),
+        ) +
+        `</div>\n    <p class="small muted" style="margin:8px 0 0">` +
+        L('This number cannot receive replies.', 'Ce numéro ne peut pas recevoir de réponses.') +
+        `</p>`)
+    );
   }
   if (nm) {
-    const th = P.th[nm] || []; P.un[nm] = 0;
+    const th = P.th[nm] || [];
+    P.un[nm] = 0;
     const acts = E.phoneList(S, nm);
-    return head(nm, '') + offB + `${threadTop()}
-    <div class="phthread" id="phthread">${th.length ? threadHtml(th, false) : `<p class="small muted" style="margin:6px 0">${L('No messages yet. Say something.', 'Aucun message pour l\'instant. Dis quelque chose.')}</p>`}</div>
-    <div class="ib">${acts.map(a => `<button class="btn small ${a.ok ? '' : 'dis'}" data-act="phact" data-v="${a.id}" ${a.ok ? '' : `data-why="${ea(a.why)}"`}>${LX(PHL[a.id])}</button>`).join('')}</div>
-    <div class="row" style="margin-top:10px"><button class="btn ghost small" data-act="person" data-v="${ea(nm)}">${L('Open profile', 'Voir le profil')}</button></div>`;
+    return (
+      head(nm, '') +
+      offB +
+      (`${threadTop()}\n    <div class="phthread" id="phthread">` +
+        (th.length
+          ? threadHtml(th, false)
+          : `<p class="small muted" style="margin:6px 0">` +
+            L('No messages yet. Say something.', "Aucun message pour l'instant. Dis quelque chose.") +
+            `</p>`) +
+        `</div>\n    <div class="ib">` +
+        acts
+          .map(
+            a =>
+              `<button class="btn small ${a.ok ? '' : 'dis'}" data-act="phact" data-v="${a.id}" ${a.ok ? '' : `data-why="${ea(a.why)}"`}>` +
+              `${LX(PHL[a.id])}</button>`,
+          )
+          .join('') +
+        `</div>\n    <div class="row" style="margin-top:10px">` +
+        `<button class="btn ghost small" data-act="person" data-v="${ea(nm)}">${L('Open profile', 'Voir le profil')}` +
+        `</button></div>`)
+    );
   }
   const names = E.metOf(S, E.KIDS.concat(E.FAM));
-  const act = names.filter(n => P.th[n] && P.th[n].length).sort((a, b) => (P.un[b] || 0) - (P.un[a] || 0) || (P.last[b] || 0) - (P.last[a] || 0));
+  const act = names
+    .filter(n => P.th[n] && P.th[n].length)
+    .sort((a, b) => (P.un[b] || 0) - (P.un[a] || 0) || (P.last[b] || 0) - (P.last[a] || 0));
   const rest = names.filter(n => !act.includes(n));
-  const prev = n => { const th = P.th[n] || []; const m = th[th.length - 1]; if (!m) return ''; const x = m.f === 'sys' ? (m.t || '') : m.t; return (m.f === 'me' ? L('You: ', 'Toi : ') : '') + (x || ''); };
-  const row = n => { const u = (P.un[n] || 0); return `<button class="phrow" data-act="phopen" data-v="${ea(n)}">${avatar(n, 38)}<div class="pmid"><div class="nm">${esc(n)}</div><div class="small muted phprev">${esc(prev(n))}</div></div>${u ? `<span class="phbadge">${u}</span>` : ''}</button>`; };
-  const unk = unkOn() ? `<button class="phrow" data-act="phopen" data-v="?"><span class="av unk">?</span><div class="pmid"><div class="nm">${L('Unknown number', 'Numéro inconnu')}</div><div class="small muted phprev">${esc(L('Hey. Can you see this?', 'Hé. Tu vois ça ?'))}</div></div>${unkNew() ? '<span class="phbadge">1</span>' : ''}</button>` : '';
-  const grow = key => { const th = P.th[key] || []; const m = th[th.length - 1]; const u = P.un[key] || 0; const p = m ? ((m.f === 'me' ? L('You: ', 'Toi : ') : m.s ? m.s + ': ' : '') + (m.t || '')) : ''; return `<button class="phrow" data-act="phopen" data-v="${key}"><span class="av unk">${GCN[key][2]}</span><div class="pmid"><div class="nm">${esc(LX(GCN[key]))}</div><div class="small muted phprev">${esc(p)}</div></div>${u ? `<span class="phbadge">${u}</span>` : ''}</button>`; };
-  const gm = `<button class="phrow" data-act="phgames"><span class="av unk">🎮</span><div class="pmid"><div class="nm">${L('Games', 'Jeux')}</div><div class="small muted phprev">${L('Four quick games', 'Quatre jeux rapides')}</div></div></button>`;
-  return head(L('Phone', 'Téléphone'), '') + offB + `<p class="small muted" style="margin:-4px 0 8px">${textsLeft()} · ${L('In-person actions use time blocks; texts are free but limited.', 'Les actions en personne utilisent des blocs de temps ; les textos sont gratuits mais limités.')}</p>
-  <div class="card" style="padding:4px 12px">${unk}${S.di >= 1 ? grow('#class') + grow('#fam') : ''}${gm}${act.map(row).join('')}${act.length && rest.length ? `<div class="small muted" style="padding:8px 0 2px">${L('Contacts', 'Contacts')}</div>` : ''}${rest.map(row).join('')}</div>`;
+  const prev = n => {
+    const th = P.th[n] || [];
+    const m = th[th.length - 1];
+    if (!m) return '';
+    const x = m.f === 'sys' ? m.t || '' : m.t;
+    return (m.f === 'me' ? L('You: ', 'Toi : ') : '') + (x || '');
+  };
+  const row = n => {
+    const u = P.un[n] || 0;
+    return (
+      `<button class="phrow" data-act="phopen" data-v="${ea(n)}">${avatar(n, 38)}<div class="pmid">` +
+      `<div class="nm">${esc(n)}</div><div class="small muted phprev">${esc(prev(n))}</div></div>` +
+      (u ? `<span class="phbadge">${u}</span>` : '') +
+      `</button>`
+    );
+  };
+  const unk = unkOn()
+    ? `<button class="phrow" data-act="phopen" data-v="?"><span class="av unk">?</span><div class="pmid">` +
+      `<div class="nm">${L('Unknown number', 'Numéro inconnu')}</div>` +
+      `<div class="small muted phprev">${esc(L('Hey. Can you see this?', 'Hé. Tu vois ça ?'))}</div>` +
+      `</div>${unkNew() ? '<span class="phbadge">1</span>' : ''}</button>`
+    : '';
+  const grow = key => {
+    const th = P.th[key] || [];
+    const m = th[th.length - 1];
+    const u = P.un[key] || 0;
+    const p = m ? (m.f === 'me' ? L('You: ', 'Toi : ') : m.s ? m.s + ': ' : '') + (m.t || '') : '';
+    return (
+      `<button class="phrow" data-act="phopen" data-v="${key}"><span class="av unk">${GCN[key][2]}</span>` +
+      `<div class="pmid"><div class="nm">${esc(LX(GCN[key]))}</div>` +
+      `<div class="small muted phprev">${esc(p)}</div></div>` +
+      (u ? `<span class="phbadge">${u}</span>` : '') +
+      `</button>`
+    );
+  };
+  const gm =
+    `<button class="phrow" data-act="phgames"><span class="av unk">🎮</span><div class="pmid">` +
+    `<div class="nm">${L('Games', 'Jeux')}</div>` +
+    `<div class="small muted phprev">${L('Four quick games', 'Quatre jeux rapides')}</div></div></button>`;
+  return (
+    head(L('Phone', 'Téléphone'), '') +
+    offB +
+    (`<p class="small muted" style="margin:-4px 0 8px">${textsLeft()} · ` +
+      L(
+        'In-person actions use time blocks; texts are free but limited.',
+        'Les actions en personne utilisent des blocs de temps ; les textos sont gratuits mais limités.',
+      ) +
+      `</p>\n  ` +
+      `<div class="card" style="padding:4px 12px">${unk}${S.di >= 1 ? grow('#class') + grow('#fam') : ''}${gm}${act.map(row).join('')}` +
+      (act.length && rest.length
+        ? `<div class="small muted" style="padding:8px 0 2px">${L('Contacts', 'Contacts')}</div>`
+        : '') +
+      `${rest.map(row).join('')}</div>`)
+  );
 }
-function showPhone(name) { if (!S || S.over) return; V.ph = { name: name || null }; V.person = null; V.sub = null; V.res = null; E.phoneOf(S).ping = null; V.modal = phoneHtml; renderModal(); phScroll(); }
-function phScroll() { const th = document.getElementById('phthread'); if (th) th.scrollTop = th.scrollHeight; }
-function phDone(r) { if (r && r.err) { toast(r.err); } try { Store.autosave(S); } catch (e) {} render(); phScroll(); }
+function showPhone(name) {
+  if (!S || S.over) return;
+  V.ph = { name: name || null };
+  V.person = null;
+  V.sub = null;
+  V.res = null;
+  E.phoneOf(S).ping = null;
+  V.modal = phoneHtml;
+  renderModal();
+  phScroll();
+}
+function phScroll() {
+  const th = document.getElementById('phthread');
+  if (th) th.scrollTop = th.scrollHeight;
+}
+function phDone(r) {
+  if (r && r.err) {
+    toast(r.err);
+  }
+  try {
+    Store.autosave(S);
+  } catch (e) {}
+  render();
+  phScroll();
+}
 
 /* ---------- run summary (for feedback) & note for MC ---------- */
 async function summaryText() {
