@@ -525,7 +525,7 @@ function diary(l) {
 }
 /* journal: 195 day pages + 5 ending pages. hsh/pk give stable "random" picks from a date or name. */
 const JN = () => E.DAYS.length + 5;
-const hsh = x => { let h = 2166136261; x = String(x); for (let i = 0; i < x.length; i++) { h ^= x.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+const hsh = E.hash; // 32-bit FNV-1a of String(x), unsigned: the engine's hash (also used for avatars)
 const pk = (arr, seed) => arr[hsh(seed) % arr.length];
 const listJoin = a => a.length <= 1 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
 const OPEN = ['Another day at school.', 'I almost overslept this morning, and my hair shows it.', 'The hallway smelled like floor wax and pencil shavings.', 'It was one of those days where the clock moves slowly.', 'I woke up with a funny feeling about today.', 'My backpack feels heavier every week.', 'The bus was loud, as usual, and I had my window seat.', 'I packed my lunch twice and still forgot a spoon.', 'The sky was grey, which somehow made everything feel more important.', 'I can hardly believe how fast this year is going.'];
@@ -787,9 +787,8 @@ function relBar(v) {
 /* ---------- avatars ---------- */
 /* simple drawn avatars (procedural SVG, deterministic per name) */
 const AVC = { skin: ['#f6d9c0', '#eec39f', '#d9a577', '#b57f55', '#8a5a3b', '#5f3d28'], hair: ['#2b1d17', '#4a2f20', '#7a4a2a', '#b07a3c', '#d9b05a', '#a8412a', '#3b3b44', '#c9c9d0'], bg: ['#cfe3f5', '#f5d6df', '#d9ecd1', '#f3e6bf', '#e0d6f2', '#d1ece8', '#f6dcc8'] };
-function avHash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function avatar(name, size) {
-  const c = CH[name] || {}; const h = avHash(name); const pick = (arr, sh) => arr[(h >>> sh) % arr.length];
+  const c = CH[name] || {}; const h = hsh(name); const pick = (arr, sh) => arr[(h >>> sh) % arr.length];
   const skin = pick(AVC.skin, 0), bg = pick(AVC.bg, 5), girl = c.g === 'F', adult = c.role === 'teach' || name === 'Mom' || name === 'Dad';
   let hair = pick(AVC.hair, 9); if (c.role === 'teach' && ((h >>> 3) % 3 === 0)) hair = '#a9a9b2';
   const style = (h >>> 12) % 4, eyeSt = (h >>> 15) % 3, acc = (h >>> 18) % 5;
