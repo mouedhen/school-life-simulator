@@ -2509,16 +2509,62 @@ const D = () => E.D;
 /* ---------- Shop tab ---------- */
 function viewShop() {
   const items = E.SHOP.map(it => {
-    const owned = it.kind === 'perm' ? (S.perm[it.n] ? 1 : 0) : (S.inv[it.n] || 0);
+    const owned = it.kind === 'perm' ? (S.perm[it.n] ? 1 : 0) : S.inv[it.n] || 0;
     const can = S.money >= it.price && !(it.kind === 'perm' && owned);
-    if (E.itemLocked(S, it)) return `<div class="card item locked" style="margin:0"><div class="top"><span><span class="ico">🔒</span> ???</span><span class="price">$${it.price}</span></div><div class="muted small">${L('Unlocks through an event: ', 'Se débloque par un événement : ')}${esc(tr(it.hint))}</div></div>`;
-    return `<div class="card item" style="margin:0"><div class="top"><span><span class="ico">${itemIcon(it.n, it.kind)}</span> ${esc(it.n)}</span><span class="price">$${it.price}</span></div><div class="muted small">${esc(it.use || it.note)}</div>
-    <div class="row" style="align-items:center;justify-content:space-between"><span class="small muted">${owned ? t('Owned') + ' ×' + owned : ''}</span><button class="btn small" data-act="buy" data-v="${it.id}" ${can ? '' : 'disabled'}>${t('Buy')}</button></div></div>`;
+    if (E.itemLocked(S, it))
+      return (
+        `<div class="card item locked" style="margin:0"><div class="top"><span><span class="ico">🔒` +
+        `</span> ???</span><span class="price">$${it.price}</span></div><div class="muted small">` +
+        L('Unlocks through an event: ', 'Se débloque par un événement : ') +
+        `${esc(tr(it.hint))}</div></div>`
+      );
+    return (
+      `<div class="card item" style="margin:0"><div class="top"><span>` +
+      `<span class="ico">${itemIcon(it.n, it.kind)}</span> ${esc(it.n)}</span>` +
+      `<span class="price">$${it.price}</span></div><div class="muted small">${esc(it.use || it.note)}` +
+      `</div>\n    <div class="row" style="align-items:center;justify-content:space-between">` +
+      `<span class="small muted">${owned ? t('Owned') + ' ×' + owned : ''}</span>` +
+      `<button class="btn small" data-act="buy" data-v="${it.id}" ${can ? '' : 'disabled'}>${t('Buy')}` +
+      `</button></div></div>`
+    );
   }).join('');
   const bag = Object.keys(S.inv).filter(k => S.inv[k] > 0);
   const perms = Object.keys(S.perm);
-  const bagHtml = (bag.length || perms.length) ? `<div class="ib">${bag.map(k => { const it = E.SHOP.find(x => x.n === k); const usable = it && ['use', 'cosmetic'].includes(it.kind) && !(it.kind === 'cosmetic' && S.worn[k]); return `<div class="card" style="margin:0;padding:9px"><span class="ico">${itemIcon(k, it && it.kind)}</span> <b>${esc(k)}</b> ×${S.inv[k]}${usable ? `<div class="row" style="margin-top:6px"><button class="btn small" data-act="use" data-v="${ea(k)}">${it.kind === 'cosmetic' ? t('Wear') : t('Use')}</button></div>` : `<div class="small muted">${it && it.kind === 'prep' ? 'Auto-used on study checks' : 'Gift / hangout item'}</div>`}</div>`; }).join('')}${perms.map(k => `<div class="card" style="margin:0;padding:9px"><span class="ico">${itemIcon(k, 'perm')}</span> <b>${esc(tr(k))}</b><div class="small muted">Permanent</div></div>`).join('')}</div>` : `<div class="muted">${t('Empty')}</div>`;
-  return `<div class="card"><h3>${t('Bag')}</h3>${bagHtml}</div><h3 style="margin:14px 0 8px">${t('Shop')}</h3><div class="grid2">${items}</div><p class="small" style="margin:14px 0 0">${inkHtml('k4', CLUES().k4)}</p>`;
+  const bagHtml =
+    bag.length || perms.length
+      ? `<div class="ib">` +
+        bag
+          .map(k => {
+            const it = E.SHOP.find(x => x.n === k);
+            const usable = it && ['use', 'cosmetic'].includes(it.kind) && !(it.kind === 'cosmetic' && S.worn[k]);
+            return (
+              `<div class="card" style="margin:0;padding:9px"><span class="ico">${itemIcon(k, it && it.kind)}` +
+              `</span> <b>${esc(k)}</b> ×${S.inv[k]}` +
+              (usable
+                ? `<div class="row" style="margin-top:6px">` +
+                  `<button class="btn small" data-act="use" data-v="${ea(k)}">${it.kind === 'cosmetic' ? t('Wear') : t('Use')}` +
+                  `</button></div>`
+                : `<div class="small muted">` +
+                  (it && it.kind === 'prep' ? 'Auto-used on study checks' : 'Gift / hangout item') +
+                  `</div>`) +
+              `</div>`
+            );
+          })
+          .join('') +
+        perms
+          .map(
+            k =>
+              `<div class="card" style="margin:0;padding:9px"><span class="ico">${itemIcon(k, 'perm')}</span> ` +
+              `<b>${esc(tr(k))}</b><div class="small muted">Permanent</div></div>`,
+          )
+          .join('') +
+        `</div>`
+      : `<div class="muted">${t('Empty')}</div>`;
+  return (
+    `<div class="card"><h3>${t('Bag')}</h3>${bagHtml}</div><h3 style="margin:14px 0 8px">${t('Shop')}` +
+    `</h3><div class="grid2">${items}</div>` +
+    `<p class="small" style="margin:14px 0 0">${inkHtml('k4', CLUES().k4)}</p>`
+  );
 }
 
 /* ---------- Work tab: kitchen, family time, jobs ---------- */
