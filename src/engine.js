@@ -441,8 +441,11 @@ const HOL_BY_RET = {}; // return date -> HOLIDAYS key ('' for the gift scenes)
 Object.keys(HOLIDAYS).forEach(k => HOL_BY_RET[HOLIDAYS[k].ret] = k);
 
 /* ---------- shop ---------- */
+// SHOP = the items from data.js, then EXTRA, then EVENT_ITEMS; id = index in SHOP.
+// kind: gift (give it) | prep (auto-used on the next study check) | use (useItem) | perm (owned
+// forever, S.perm) | cosmetic (wear once for POP) | booster (spent on a hangout or lunch)
 const SHOP = D.shop.map((s, i) => ({ id: i, n: s.name, price: s.price, note: s.effect }));
-const SHOPKIND = { // kind: gift | prep | use | perm | cosmetic
+const SHOPKIND = { // name -> [kind, what it does]
   'Notebook & pen set': ['prep', 'Auto-used on your next study check: +10% to pass.'],
   'Sticker pack': ['gift', 'A small gift.'],
   'Snack': ['gift', 'Share it with someone (small gift).'],
@@ -464,6 +467,7 @@ const SHOPKIND = { // kind: gift | prep | use | perm | cosmetic
   'Café drink': ['booster', 'Use it on a hangout: +1 relationship.'],
   'Mystery box': ['use', 'Open it: a random harmless surprise.'],
 };
+// more items: [name, price, kind, note]
 const EXTRA = [
   ['Study guide', 9, 'prep', 'Auto-used on your next study check: +20% to pass.'],
   ['Flashcards', 12, 'perm', 'Permanent: studying builds +15% prep instead of +10%.'],
@@ -482,7 +486,10 @@ const EXTRA = [
   ['Stylish backpack', 30, 'cosmetic', 'Wear it: Popularity +2 (once).'],
   ['Smartwatch', 60, 'perm', 'Permanent: one extra time block every single day.'],
 ];
-EXTRA.forEach(x => { SHOP.push({ id: SHOP.length, n: x[0], price: x[1], note: x[3] }); SHOPKIND[x[0]] = [x[2], x[3]]; });
+EXTRA.forEach(x => {
+  SHOP.push({ id: SHOP.length, n: x[0], price: x[1], note: x[3] });
+  SHOPKIND[x[0]] = [x[2], x[3]];
+});
 // shop items that stay locked until an event sets their flag: [name, price, kind, note, flag, hint]
 const EVENT_ITEMS = [
   ['Club badge', 6, 'cosmetic', 'Wear it: Popularity +1 (once).', 'CLUB_MEMBER', 'Join a club at school.'],
@@ -500,12 +507,22 @@ const EVENT_ITEMS = [
   ['Showcase apron', 15, 'cosmetic', 'Wear it: Popularity +1 (once).', 'HELPED_AT_SHOWCASE', 'Help at the cooking showcase.'],
   ['Group photo frame', 9, 'gift', 'A frame for a photo everyone is in.', 'INCLUSIVE_PHOTO', 'Make sure everyone is in the photo.'],
 ];
-EVENT_ITEMS.forEach(x => { SHOP.push({ id: SHOP.length, n: x[0], price: x[1], note: x[3], flag: x[4], hint: x[5] }); SHOPKIND[x[0]] = [x[2], x[3]]; });
-SHOP.forEach(s => { const k = SHOPKIND[s.n] || ['gift', '']; s.kind = k[0]; s.use = k[1]; });
+EVENT_ITEMS.forEach(x => {
+  SHOP.push({ id: SHOP.length, n: x[0], price: x[1], note: x[3], flag: x[4], hint: x[5] });
+  SHOPKIND[x[0]] = [x[2], x[3]];
+});
+SHOP.forEach(s => {
+  const k = SHOPKIND[s.n] || ['gift', ''];
+  s.kind = k[0];
+  s.use = k[1];
+});
 const itemLocked = (S, it) => !!it.flag && !F(S, it.flag);
-const SHOPBYNAME = {}; SHOP.forEach(s => SHOPBYNAME[s.n] = s);
+const SHOPBYNAME = {};
+SHOP.forEach(s => SHOPBYNAME[s.n] = s);
 
 /* ---------- jobs ---------- */
+// pay in $, blocks = time blocks; optional g / p = grade / POP gained, fam = +2 with Mom and Dad,
+// need = an item that is used up (or S.craftReady). Notes come from data.js.
 const JOBS = [
   { n: "Water a neighbor's plants", pay: 6, blocks: 1, fx: 'p+0', gain: 'Kindness' },
   { n: 'Pet-sit for a familiar neighbor', pay: 10, blocks: 1 },
@@ -519,7 +536,12 @@ const JOBS = [
   { n: 'Bake-sale helper', pay: 7, blocks: 1, p: 1 },
   { n: 'Walk dogs after school', pay: 9, blocks: 1 },
   { n: 'Sell handmade crafts', pay: 14, blocks: 2, need: 'Craft kit' },
-].map((j, i) => { const src = D.jobs[i]; j.note = src ? src.note : ''; j.id = i; return j; });
+].map((j, i) => {
+  const src = D.jobs[i];
+  j.note = src ? src.note : '';
+  j.id = i;
+  return j;
+});
 
 /* ---------- interaction catalogue ---------- */
 // cost = time blocks; daily = max uses per person per day; who / gate are descriptive only:
@@ -556,12 +578,19 @@ const INTER = [
   { id: 'collab', n: 'Work on a project together', cost: 1, who: 'classmate' },
   { id: 'joingroup', n: 'Ask to join their group', cost: 1, who: 'popular' },
 ];
-const INTERBY = {}; INTER.forEach(i => INTERBY[i.id] = i);
+const INTERBY = {}; // id -> INTER entry
+INTER.forEach(i => INTERBY[i.id] = i);
+// what you can do with a teacher; what you cannot do with family
 const TEACHER_OK = new Set(['talk', 'compliment', 'askhelp', 'apologize', 'boundary', 'end', 'defend', 'advice', 'message']);
 const FAMILY_NO = new Set(['start', 'fight', 'prank', 'study', 'group', 'debate', 'joingroup', 'lunch', 'collab']);
 
 /* ---------- links / ripple ---------- */
-const LINKS = {}; D.links.forEach(([a, b, k]) => { (LINKS[a] = LINKS[a] || []).push([b, k]); (LINKS[b] = LINKS[b] || []).push([a, k]); });
+// LINKS[name] = [[other, k], ...] in both directions. k > 0: friends (2+ = close), k < 0: they dislike each other.
+const LINKS = {};
+D.links.forEach(([a, b, k]) => {
+  (LINKS[a] = LINKS[a] || []).push([b, k]);
+  (LINKS[b] = LINKS[b] || []).push([a, k]);
+});
 
 /* ---------- state ---------- */
 // The whole game is one plain object S (saved as JSON by the UI). Field names are short and
