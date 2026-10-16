@@ -3515,53 +3515,209 @@ async function showStats() {
 
 /* ---------- person profile ---------- */
 function showPerson(name) {
-  V.person = name; V.sub = null; V.res = null;
-  V.modal = () => personHtml(name); renderModal();
+  V.person = name;
+  V.sub = null;
+  V.res = null;
+  V.modal = () => personHtml(name);
+  renderModal();
 }
-function stars(n) { return '●'.repeat(n) + '○'.repeat(5 - n); }
+function stars(n) {
+  return '●'.repeat(n) + '○'.repeat(5 - n);
+}
 function personHtml(name) {
-  const c = CH[name]; const v = S.rel[name]; const lab = E.relLabel(v);
+  const c = CH[name];
+  const v = S.rel[name];
+  const lab = E.relLabel(v);
   if (V.res) {
     const r = V.res;
-    return head(name, `<span class="tag alt">${t(V.resTitle || 'Done')}</span>`) + `<div class="lines">${(r.lines || []).map(lineHtml).join('')}${r.err ? `<p>${esc(r.err)}</p>` : ''}</div>${chips(r.chips)}<div class="row" style="margin-top:14px"><button class="btn primary" data-act="presback">${t('Continue')}</button></div>`;
+    return (
+      head(name, `<span class="tag alt">${t(V.resTitle || 'Done')}</span>`) +
+      (`<div class="lines">${(r.lines || []).map(lineHtml).join('')}` +
+        (r.err ? `<p>${esc(r.err)}</p>` : '') +
+        `</div>${chips(r.chips)}<div class="row" style="margin-top:14px">` +
+        `<button class="btn primary" data-act="presback">${t('Continue')}</button></div>`)
+    );
   }
   if (V.sub) return subHtml(name);
   const rum = E.rumorsFor(S, name);
-  const gf = (S.giftFrom && S.giftFrom[name]) || []; const gfc = {}; gf.forEach(x => { gfc[x] = (gfc[x] || 0) + 1; });
+  const gf = (S.giftFrom && S.giftFrom[name]) || [];
+  const gfc = {};
+  gf.forEach(x => {
+    gfc[x] = (gfc[x] || 0) + 1;
+  });
   const known = rum.filter(r => r.known);
   const list = E.interactionList(S, name);
-  return head(name, '') + `<div class="avbig">${avatar(name, 76)}</div><div class="muted small" style="margin:-4px 0 10px">${c.role === 'kid' ? t('Classmates') : c.role === 'fam' ? t('Family') : t('Teachers')} · ${t('Age')} ${c.a} · ${t('Birthday')}: ${esc(c.b)}</div>
-  <p style="margin:0 0 10px">${esc(c.pers)}</p>
-  <div class="card" style="padding:10px"><div class="row" style="justify-content:space-between"><b>${t('Relationship')}</b><span class="pill ${lab}">${relT(lab)} · ${signed(v)}</span></div>${relBar(v)}
-  <div class="row" style="justify-content:space-between;margin-top:8px" ><span class="small muted">${t('Approachability')} ${stars(c.ap)}</span>${c.pop != null ? `<span class="small muted">${t('Popularity')} ${c.pop}</span>` : ''}</div></div>
-  ${gf.length ? `<p class="small muted" style="margin:0 0 10px">${L('They gave you', 'Cadeaux reçus de cette personne')}: ${Object.keys(gfc).map(k => esc(k) + (gfc[k] > 1 ? ' ×' + gfc[k] : '')).join(', ')}</p>` : ''}
-  <div class="card" style="padding:10px"><b>${t('Rumors')}</b>${known.length ? known.map(r => `<p class="small" style="margin:6px 0 0">“${esc(r.t)}”</p>`).join('') : `<p class="small muted" style="margin:6px 0 0">${L('Nothing heard yet. Listen for rumors while talking.', 'Rien d\'entendu pour l\'instant. Écoute des rumeurs en parlant.')}</p>`}</div>
-  <div class="ib">${E.phoneList(S, name).length && !E.phoneOff(S) ? `<button class="btn small primary" data-act="phtext" data-v="${ea(name)}">📱 ${L('Text', 'Texter')}<small>${phLeft()}/${E.PHONE_CAP}</small></button>` : ''}${list.filter(i => E.phoneOff(S) || !E.PHONE_HIDE.has(i.id)).map(i => `<button class="btn small ${i.ok ? '' : 'dis'}" data-act="inter" data-v="${i.id}" ${i.ok ? '' : `data-why="${ea(i.why)}"`}>${esc(t(i.n))}<small>${i.cost ? i.cost + ' ' + t('block') : '—'}</small></button>`).join('')}</div>`;
+  return (
+    head(name, '') +
+    (`<div class="avbig">${avatar(name, 76)}</div><div class="muted small" style="margin:-4px 0 10px">` +
+      (c.role === 'kid' ? t('Classmates') : c.role === 'fam' ? t('Family') : t('Teachers')) +
+      ` · ${t('Age')} ${c.a} · ${t('Birthday')}: ${esc(c.b)}</div>\n  ` +
+      `<p style="margin:0 0 10px">${esc(c.pers)}</p>\n  <div class="card" style="padding:10px">` +
+      `<div class="row" style="justify-content:space-between"><b>${t('Relationship')}</b>` +
+      `<span class="pill ${lab}">${relT(lab)} · ${signed(v)}</span></div>${relBar(v)}\n  ` +
+      `<div class="row" style="justify-content:space-between;margin-top:8px" >` +
+      `<span class="small muted">${t('Approachability')} ${stars(c.ap)}</span>` +
+      (c.pop != null ? `<span class="small muted">${t('Popularity')} ${c.pop}</span>` : '') +
+      `</div></div>\n  ` +
+      (gf.length
+        ? `<p class="small muted" style="margin:0 0 10px">${L('They gave you', 'Cadeaux reçus de cette personne')}: ` +
+          Object.keys(gfc)
+            .map(k => esc(k) + (gfc[k] > 1 ? ' ×' + gfc[k] : ''))
+            .join(', ') +
+          `</p>`
+        : '') +
+      `\n  <div class="card" style="padding:10px"><b>${t('Rumors')}</b>` +
+      (known.length
+        ? known.map(r => `<p class="small" style="margin:6px 0 0">“${esc(r.t)}”</p>`).join('')
+        : `<p class="small muted" style="margin:6px 0 0">` +
+          L(
+            'Nothing heard yet. Listen for rumors while talking.',
+            "Rien d'entendu pour l'instant. Écoute des rumeurs en parlant.",
+          ) +
+          `</p>`) +
+      `</div>\n  <div class="ib">` +
+      (E.phoneList(S, name).length && !E.phoneOff(S)
+        ? `<button class="btn small primary" data-act="phtext" data-v="${ea(name)}">📱 ${L('Text', 'Texter')}` +
+          `<small>${phLeft()}/${E.PHONE_CAP}</small></button>`
+        : '') +
+      list
+        .filter(i => E.phoneOff(S) || !E.PHONE_HIDE.has(i.id))
+        .map(
+          i =>
+            `<button class="btn small ${i.ok ? '' : 'dis'}" data-act="inter" data-v="${i.id}" ${i.ok ? '' : `data-why="${ea(i.why)}"`}>` +
+            `${esc(t(i.n))}<small>${i.cost ? i.cost + ' ' + t('block') : '—'}</small></button>`,
+        )
+        .join('') +
+      `</div>`)
+  );
 }
 function subHtml(name) {
-  const s = V.sub; const c = CH[name];
-  const back = `<div class="row" style="margin-top:12px"><button class="btn ghost" data-act="subback">${t('Back')}</button></div>`;
-  const btn = (act, v, label, small) => `<button class="btn" data-act="${act}" data-v="${ea(v)}">${esc(label)}${small ? `<small>${esc(small)}</small>` : ''}</button>`;
+  const s = V.sub;
+  const c = CH[name];
+  const back =
+    `<div class="row" style="margin-top:12px"><button class="btn ghost" data-act="subback">${t('Back')}` +
+    `</button></div>`;
+  const btn = (act, v, label, small) =>
+    `<button class="btn" data-act="${act}" data-v="${ea(v)}">${esc(label)}` +
+    (small ? `<small>${esc(small)}</small>` : '') +
+    `</button>`;
   if (s.type === 'about') {
     if (!s.subject) {
       const names = Object.keys(CH).filter(n => n !== name && CH[n].role !== 'teach');
-      return head(name, `<span class="tag alt">${t('Talk about someone')}</span>`) + `<p class="desc">${L('Who do you want to talk about?', 'De qui veux-tu parler ?')}</p><div class="ib">${names.map(n => `<button class="btn" data-act="aboutpick" data-v="${ea(n)}">${esc(n)}<small>${relT(E.relLabel(S.rel[n]))} ${signed(S.rel[n])}</small></button>`).join('')}</div>` + back;
+      return (
+        head(name, `<span class="tag alt">${t('Talk about someone')}</span>`) +
+        (`<p class="desc">` +
+          L('Who do you want to talk about?', 'De qui veux-tu parler ?') +
+          `</p><div class="ib">` +
+          names
+            .map(
+              n =>
+                `<button class="btn" data-act="aboutpick" data-v="${ea(n)}">${esc(n)}` +
+                `<small>${relT(E.relLabel(S.rel[n]))} ${signed(S.rel[n])}</small></button>`,
+            )
+            .join('') +
+          `</div>`) +
+        back
+      );
     }
-    return head(name, `<span class="tag alt">${t('Talk about someone')}</span>`) + `<p class="desc">${L('What do you say about ', 'Que dis-tu sur ')}<b>${esc(s.subject)}</b>?</p><div class="choices">
-    <button class="choice" data-act="go" data-v="${ea(s.subject)}|bad"><span class="l">−</span><span>${L('Speak badly behind their back', 'Dire du mal dans son dos')}<small>${L('Risky: it can get back to them', 'Risqué : peut revenir à ses oreilles')}</small></span></button>
-    <button class="choice" data-act="go" data-v="${ea(s.subject)}|good"><span class="l">+</span><span>${L('Say good things about them', 'En dire du bien')}</span></button>
-    <button class="choice" data-act="go" data-v="${ea(s.subject)}|neutral"><span class="l">·</span><span>${L('Just mention them', 'Le mentionner simplement')}</span></button></div>` + back;
+    return (
+      head(name, `<span class="tag alt">${t('Talk about someone')}</span>`) +
+      (`<p class="desc">${L('What do you say about ', 'Que dis-tu sur ')}<b>${esc(s.subject)}</b>?</p>` +
+        `<div class="choices">\n    <button class="choice" data-act="go" data-v="${ea(s.subject)}|bad">` +
+        `<span class="l">−</span><span>` +
+        L('Speak badly behind their back', 'Dire du mal dans son dos') +
+        `<small>` +
+        L('Risky: it can get back to them', 'Risqué : peut revenir à ses oreilles') +
+        `</small></span></button>\n    <button class="choice" data-act="go" data-v="${ea(s.subject)}|good">` +
+        `<span class="l">+</span><span>${L('Say good things about them', 'En dire du bien')}</span>` +
+        `</button>\n    <button class="choice" data-act="go" data-v="${ea(s.subject)}|neutral">` +
+        `<span class="l">·</span><span>${L('Just mention them', 'Le mentionner simplement')}</span></button>` +
+        `</div>`) +
+      back
+    );
   }
-  if (s.type === 'talk') return head(name, `<span class="tag alt">${t('Topic')}</span>`) + `<div class="ib">${btn('go', 'school', t('School'))}${btn('go', 'hobbies', t('Hobbies'))}${btn('go', 'daily', t('Daily life'))}${btn('go', 'rumor', t('Listen for a rumor'))}</div>` + back;
-  if (s.type === 'gift') return head(name, `<span class="tag alt">${t('Give a gift')}</span>`) + `<div class="ib">${E.giftItems(S).map(it => btn('go', it.n, it.n, '×' + (S.inv[it.n] || 0))).join('')}</div>` + back;
+  if (s.type === 'talk')
+    return (
+      head(name, `<span class="tag alt">${t('Topic')}</span>`) +
+      (`<div class="ib">${btn('go', 'school', t('School'))}${btn('go', 'hobbies', t('Hobbies'))}${btn('go', 'daily', t('Daily life'))}` +
+        `${btn('go', 'rumor', t('Listen for a rumor'))}</div>`) +
+      back
+    );
+  if (s.type === 'gift')
+    return (
+      head(name, `<span class="tag alt">${t('Give a gift')}</span>`) +
+      (`<div class="ib">` +
+        E.giftItems(S)
+          .map(it => btn('go', it.n, it.n, '×' + (S.inv[it.n] || 0)))
+          .join('') +
+        `</div>`) +
+      back
+    );
   if (s.type === 'hangout') {
-    const boost = ['Movie ticket', 'Café drink', 'Fancy snack box', 'Concert ticket'].filter(k => S.inv[k] > 0).concat(['Sports ball', 'Sketchbook'].filter(k => S.perm[k]));
-    return head(name, `<span class="tag alt">${t('Hang out')}</span>`) + `<div class="ib">${btn('go', '', t('No booster'))}${boost.map(k => btn('go', k, k)).join('')}</div>` + back;
+    const boost = ['Movie ticket', 'Café drink', 'Fancy snack box', 'Concert ticket']
+      .filter(k => S.inv[k] > 0)
+      .concat(['Sports ball', 'Sketchbook'].filter(k => S.perm[k]));
+    return (
+      head(name, `<span class="tag alt">${t('Hang out')}</span>`) +
+      `<div class="ib">${btn('go', '', t('No booster'))}${boost.map(k => btn('go', k, k)).join('')}</div>` +
+      back
+    );
   }
-  if (s.type === 'lend') return head(name, `<span class="tag alt">${t('Offer to lend money')}</span>`) + `<div class="ib">${[5, 10, 20].map(a => `<button class="btn" data-act="go" data-v="${a}" ${S.money < a ? 'disabled' : ''}>$${a}</button>`).join('')}</div>` + back;
-  if (s.type === 'rumor') return head(name, `<span class="tag alt">${s.id === 'share' ? t('Share a rumor') : t('Investigate a rumor')}</span>`) + (E.rumorsFor(S, name).filter(r => r.known).length ? `<div class="choices">${E.rumorsFor(S, name).filter(r => r.known).map(r => `<button class="choice" data-act="go" data-v="${r.i}"><span class="l">${r.k === 'neg' ? '−' : r.k === 'pos' ? '+' : '·'}</span><span>${esc(r.t)}</span></button>`).join('')}</div>` : `<p class="muted">${L('You have not heard any rumor about them yet. Talk to them first (topic: rumor).', 'Tu n\'as encore entendu aucune rumeur sur cette personne. Parle-lui d\'abord (sujet : rumeur).')}</p>`) + back;
-  if (s.type === 'fight') return head(name, `<span class="tag alt">${t('Fight / confrontation')}</span>`) + `<div class="ib">${btn('go', 'confront', L('Confront', 'Confronter'), '-rep / -trust')}${btn('go', 'deescalate', L('De-escalate', 'Désamorcer'), L('safer', 'plus sûr'))}</div>` + back;
-  if (s.type === 'apologize') return head(name, `<span class="tag alt">${t('Apologize')}</span>`) + `<div class="ib">${btn('go', 'specific', L('Name exactly what I did', 'Nommer précisément ce que j\'ai fait'), L('works best', 'meilleur'))}${btn('go', 'vague', L('A vague sorry', 'Excuses vagues'))}</div>` + back;
+  if (s.type === 'lend')
+    return (
+      head(name, `<span class="tag alt">${t('Offer to lend money')}</span>`) +
+      (`<div class="ib">` +
+        [5, 10, 20]
+          .map(a => `<button class="btn" data-act="go" data-v="${a}" ${S.money < a ? 'disabled' : ''}>$${a}</button>`)
+          .join('') +
+        `</div>`) +
+      back
+    );
+  if (s.type === 'rumor')
+    return (
+      head(name, `<span class="tag alt">${s.id === 'share' ? t('Share a rumor') : t('Investigate a rumor')}</span>`) +
+      (E.rumorsFor(S, name).filter(r => r.known).length
+        ? `<div class="choices">` +
+          E.rumorsFor(S, name)
+            .filter(r => r.known)
+            .map(
+              r =>
+                `<button class="choice" data-act="go" data-v="${r.i}">` +
+                `<span class="l">${r.k === 'neg' ? '−' : r.k === 'pos' ? '+' : '·'}</span><span>${esc(r.t)}</span>` +
+                `</button>`,
+            )
+            .join('') +
+          `</div>`
+        : `<p class="muted">` +
+          L(
+            'You have not heard any rumor about them yet. Talk to them first (topic: rumor).',
+            "Tu n'as encore entendu aucune rumeur sur cette personne. Parle-lui d'abord (sujet : rumeur).",
+          ) +
+          `</p>`) +
+      back
+    );
+  if (s.type === 'fight')
+    return (
+      head(name, `<span class="tag alt">${t('Fight / confrontation')}</span>`) +
+      (`<div class="ib">` +
+        btn('go', 'confront', L('Confront', 'Confronter'), '-rep / -trust') +
+        btn('go', 'deescalate', L('De-escalate', 'Désamorcer'), L('safer', 'plus sûr')) +
+        `</div>`) +
+      back
+    );
+  if (s.type === 'apologize')
+    return (
+      head(name, `<span class="tag alt">${t('Apologize')}</span>`) +
+      (`<div class="ib">` +
+        btn(
+          'go',
+          'specific',
+          L('Name exactly what I did', "Nommer précisément ce que j'ai fait"),
+          L('works best', 'meilleur'),
+        ) +
+        `${btn('go', 'vague', L('A vague sorry', 'Excuses vagues'))}</div>`) +
+      back
+    );
   return '';
 }
 
