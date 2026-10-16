@@ -3139,24 +3139,71 @@ function afterEvent() {
 }
 /* ---------- run records (stored in prefs.runs, used for achievements and memories of past runs) ---------- */
 function runRecord() {
-  const kids = E.KIDS.slice().sort((a, b) => S.rel[b] - S.rel[a]); const en = S.ending ? E.ENDBY[S.ending.id] : null;
-  return { id: S.ending ? S.ending.id : 'over', epi: S.ending ? S.ending.epi : [], over: S.ending ? 0 : 1, bad: (!S.ending || en.bad) ? 1 : 0, pop: S.pop, grade: S.grade, money: S.money, friends: kids.filter(n => S.rel[n] >= 40).slice(0, 3), foes: kids.slice().reverse().filter(n => S.rel[n] <= -25).slice(0, 3), cook: S.cookN || 0, sig: S.flags.COOKED_SIG ? 1 : 0, knife: S.perm['Cooking knife'] ? 1 : 0 };
+  const kids = E.KIDS.slice().sort((a, b) => S.rel[b] - S.rel[a]);
+  const en = S.ending ? E.ENDBY[S.ending.id] : null;
+  return {
+    id: S.ending ? S.ending.id : 'over',
+    epi: S.ending ? S.ending.epi : [],
+    over: S.ending ? 0 : 1,
+    bad: !S.ending || en.bad ? 1 : 0,
+    pop: S.pop,
+    grade: S.grade,
+    money: S.money,
+    friends: kids.filter(n => S.rel[n] >= 40).slice(0, 3),
+    foes: kids
+      .slice()
+      .reverse()
+      .filter(n => S.rel[n] <= -25)
+      .slice(0, 3),
+    cook: S.cookN || 0,
+    sig: S.flags.COOKED_SIG ? 1 : 0,
+    knife: S.perm['Cooking knife'] ? 1 : 0,
+  };
 }
 async function recordRun() {
-  if (!S || S.recorded || !(S.ending || S.over)) return; S.recorded = 1;
-  const p = await Store.prefs(); const runs = (p.runs || []).concat([runRecord()]).slice(-12);
-  const before = new Set(p.ach || []); const c = achCtx(Object.assign({}, p, { runs })); const now = ACH().filter(a => a[3](c)).map(a => a[0]); const fresh = ACH().filter(a => now.includes(a[0]) && !before.has(a[0]));
+  if (!S || S.recorded || !(S.ending || S.over)) return;
+  S.recorded = 1;
+  const p = await Store.prefs();
+  const runs = (p.runs || []).concat([runRecord()]).slice(-12);
+  const before = new Set(p.ach || []);
+  const c = achCtx(Object.assign({}, p, { runs }));
+  const now = ACH()
+    .filter(a => a[3](c))
+    .map(a => a[0]);
+  const fresh = ACH().filter(a => now.includes(a[0]) && !before.has(a[0]));
   await Store.prefs(Object.assign({}, p, { runs, ach: now }));
-  if (fresh.length) setTimeout(() => toast('🏆 ' + L('Achievement', 'Succès') + ': ' + fresh.map(a => a[1]).join(', ')), 1500);
+  if (fresh.length)
+    setTimeout(() => toast('🏆 ' + L('Achievement', 'Succès') + ': ' + fresh.map(a => a[1]).join(', ')), 1500);
 }
 function memOf(runs) {
-  if (!runs || !runs.length) return null; const last = runs[runs.length - 1];
-  const uniq = k => { const o = []; runs.slice().reverse().forEach(r => (r[k] || []).forEach(n => { if (!o.includes(n)) o.push(n); })); return o; };
-  return { n: runs.length, last: { id: last.id, bad: last.bad, over: last.over }, foes: uniq('foes'), friends: uniq('friends') };
+  if (!runs || !runs.length) return null;
+  const last = runs[runs.length - 1];
+  const uniq = k => {
+    const o = [];
+    runs
+      .slice()
+      .reverse()
+      .forEach(r =>
+        (r[k] || []).forEach(n => {
+          if (!o.includes(n)) o.push(n);
+        }),
+      );
+    return o;
+  };
+  return {
+    n: runs.length,
+    last: { id: last.id, bad: last.bad, over: last.over },
+    foes: uniq('foes'),
+    friends: uniq('friends'),
+  };
 }
 async function markEnding() {
   if (!S.ending) return;
-  const p = await Store.prefs(); const seen = new Set(p.seen || []); seen.add(S.ending.id); S.ending.epi.forEach(i => seen.add(i)); V.seen = [...seen];
+  const p = await Store.prefs();
+  const seen = new Set(p.seen || []);
+  seen.add(S.ending.id);
+  S.ending.epi.forEach(i => seen.add(i));
+  V.seen = [...seen];
   await Store.prefs(Object.assign({}, p, { seen: V.seen, lang: LANG, theme: THEME }));
   await recordRun();
   Store.put('auto', S);
