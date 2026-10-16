@@ -2037,82 +2037,251 @@ function endPage(k) {
 /* spreads: s=-1 front cover, 0..100 open spreads, 101 back cover. Spread 0: [endpaper | p1]; s: [p(2s) | p(2s+1)]; 100: [p200 | endpaper] */
 const JS_MAX = 100;
 const endpaperHtml = () => `<div class="pg endp"><div class="inner">✦</div></div>`;
-const slotL = (s, f) => s === 0 ? endpaperHtml() : jPageHtml(2 * s - 1, f);
-const slotR = (s, f) => s === JS_MAX ? endpaperHtml() : jPageHtml(2 * s, f);
-const spreadOf = i => i === 0 ? 0 : (i % 2 === 1 ? (i + 1) / 2 : i / 2);
-const curSpread = () => V.jFinal ? spreadOf(E.DAYS.length) : spreadOf(Math.min(S.di, E.DAYS.length - 1));
+const slotL = (s, f) => (s === 0 ? endpaperHtml() : jPageHtml(2 * s - 1, f));
+const slotR = (s, f) => (s === JS_MAX ? endpaperHtml() : jPageHtml(2 * s, f));
+const spreadOf = i => (i === 0 ? 0 : i % 2 === 1 ? (i + 1) / 2 : i / 2);
+const curSpread = () => (V.jFinal ? spreadOf(E.DAYS.length) : spreadOf(Math.min(S.di, E.DAYS.length - 1)));
 function viewJournal() {
   if (V.jS == null) V.jS = V.jFinal ? curSpread() : -1;
-  const s = V.jS; const open = s >= 0 && s <= JS_MAX;
-  const cover = `<button class="cover${open || s > JS_MAX ? ' gone' : ''}" data-act="jopen" aria-label="${L('Open the journal', 'Ouvrir le journal')}"><span class="spine"></span><span class="stitch"></span><span class="emb">✎</span><span class="ttl">${LANG === 'fr' ? 'Journal<br>' + (myName() === 'MC' ? 'scolaire' : 'de ' + ea(myName())) : esc(myName() === 'MC' ? 'School Life' : myName() + "'s") + '<br>Journal'}</span><span class="sub">savepoint</span><span class="strap"></span><span class="hint">${L('Tap to open', 'Touche pour ouvrir')}</span></button>`;
-  const back = `<div class="bcover${s > JS_MAX ? ' show' : ''}" id="bcover"><span class="stitch"></span><span class="ttl">${L('The End', 'Fin')}</span><span class="sub">${esc(myName())}, 2026–2027</span></div>`;
-  const sp = open ? `<div class="slot sl" id="sl">${slotL(s)}</div><div class="slot sr" id="sr">${slotR(s)}</div>` : `<div class="slot sl" id="sl"></div><div class="slot sr" id="sr"></div>`;
-  return `<div class="jr"><div class="book" id="book"><div class="frame"></div>${cover}<div class="spread" id="spread"${open ? '' : ' style="visibility:hidden"'}>${sp}</div>${back}</div>
-  <div class="jnav"><button class="btn small" data-act="jprev" id="jprev">‹</button><span class="cnt" id="jcnt"></span><button class="btn small" data-act="jnext" id="jnext">›</button></div>
-  <div class="row" style="justify-content:center"><button class="btn small" data-act="jtoday">${V.jFinal ? L('Last pages', 'Dernières pages') : L('Today', 'Aujourd\'hui')}</button><button class="btn ghost small" data-act="jclose">${V.jFinal ? L('Back', 'Retour') : L('Close the journal', 'Fermer le journal')}</button></div></div>`;
+  const s = V.jS;
+  const open = s >= 0 && s <= JS_MAX;
+  const cover =
+    `<button class="cover${open || s > JS_MAX ? ' gone' : ''}" data-act="jopen"` +
+    ` aria-label="${L('Open the journal', 'Ouvrir le journal')}"><span class="spine"></span>` +
+    `<span class="stitch"></span><span class="emb">✎</span><span class="ttl">` +
+    (LANG === 'fr'
+      ? 'Journal<br>' + (myName() === 'MC' ? 'scolaire' : 'de ' + ea(myName()))
+      : esc(myName() === 'MC' ? 'School Life' : myName() + "'s") + '<br>Journal') +
+    `</span><span class="sub">savepoint</span><span class="strap"></span>` +
+    `<span class="hint">${L('Tap to open', 'Touche pour ouvrir')}</span></button>`;
+  const back =
+    `<div class="bcover${s > JS_MAX ? ' show' : ''}" id="bcover"><span class="stitch"></span>` +
+    `<span class="ttl">${L('The End', 'Fin')}</span><span class="sub">${esc(myName())}, 2026–2027</span>` +
+    `</div>`;
+  const sp = open
+    ? `<div class="slot sl" id="sl">${slotL(s)}</div><div class="slot sr" id="sr">${slotR(s)}</div>`
+    : `<div class="slot sl" id="sl"></div><div class="slot sr" id="sr"></div>`;
+  return (
+    `<div class="jr"><div class="book" id="book"><div class="frame"></div>${cover}` +
+    `<div class="spread" id="spread"${open ? '' : ' style="visibility:hidden"'}>${sp}</div>${back}` +
+    `</div>\n  <div class="jnav"><button class="btn small" data-act="jprev" id="jprev">‹</button>` +
+    `<span class="cnt" id="jcnt"></span><button class="btn small" data-act="jnext" id="jnext">›</button>` +
+    `</div>\n  <div class="row" style="justify-content:center">` +
+    `<button class="btn small" data-act="jtoday">` +
+    (V.jFinal ? L('Last pages', 'Dernières pages') : L('Today', "Aujourd'hui")) +
+    `</button><button class="btn ghost small" data-act="jclose">` +
+    (V.jFinal ? L('Back', 'Retour') : L('Close the journal', 'Fermer le journal')) +
+    `</button></div></div>`
+  );
 }
 let jBusy = false;
 function jLabel() {
-  const s = V.jS; if (s < 0) return L('Cover', 'Couverture'); if (s > JS_MAX) return L('The End', 'Fin');
-  const a = s === 0 ? 1 : 2 * s, b = s === JS_MAX ? 200 : 2 * s + 1;
-  const dl = i => i >= 0 && i < E.DAYS.length ? fmtDate(E.DAYS[i].d).replace(/, \d{4}$/, '').replace(/^\w+, /, '') : '';
-  const d1 = dl(a - 1), d2 = dl(b - 1);
-  return (a === b ? 'Page ' + a : 'Pages ' + a + '–' + b) + '/200' + (d1 ? ' · ' + d1 + (d2 && d2 !== d1 ? ' – ' + d2 : '') : '');
+  const s = V.jS;
+  if (s < 0) return L('Cover', 'Couverture');
+  if (s > JS_MAX) return L('The End', 'Fin');
+  const a = s === 0 ? 1 : 2 * s,
+    b = s === JS_MAX ? 200 : 2 * s + 1;
+  const dl = i =>
+    i >= 0 && i < E.DAYS.length
+      ? fmtDate(E.DAYS[i].d)
+          .replace(/, \d{4}$/, '')
+          .replace(/^\w+, /, '')
+      : '';
+  const d1 = dl(a - 1),
+    d2 = dl(b - 1);
+  return (
+    (a === b ? 'Page ' + a : 'Pages ' + a + '–' + b) +
+    '/200' +
+    (d1 ? ' · ' + d1 + (d2 && d2 !== d1 ? ' – ' + d2 : '') : '')
+  );
 }
-function jUpdateNav() { const c = $('#jcnt'); if (c) c.textContent = jLabel(); const a = $('#jprev'), b = $('#jnext'); if (a) a.disabled = V.jS <= -1; if (b) b.disabled = V.jS >= JS_MAX + 1; }
+function jUpdateNav() {
+  const c = $('#jcnt');
+  if (c) c.textContent = jLabel();
+  const a = $('#jprev'),
+    b = $('#jnext');
+  if (a) a.disabled = V.jS <= -1;
+  if (b) b.disabled = V.jS >= JS_MAX + 1;
+}
 function jFit(root) {
   (root || document).querySelectorAll('.pg:not(.endp)').forEach(pg => {
-    const inn = pg.querySelector('.inner'); if (!inn) return;
+    const inn = pg.querySelector('.inner');
+    if (!inn) return;
     const opts = [...pg.querySelectorAll('[data-opt]')].sort((a, b) => a.dataset.opt - b.dataset.opt);
-    opts.forEach(o => { o.style.display = ''; }); pg.style.fontSize = '';
-    const base = parseFloat(getComputedStyle(pg).fontSize); const over = () => inn.scrollHeight > inn.clientHeight + 1;
-    const shrink = min => { let f = 1; pg.style.fontSize = ''; while (over() && f > min) { f *= 0.96; pg.style.fontSize = (base * f) + 'px'; } return !over(); };
+    opts.forEach(o => {
+      o.style.display = '';
+    });
+    pg.style.fontSize = '';
+    const base = parseFloat(getComputedStyle(pg).fontSize);
+    const over = () => inn.scrollHeight > inn.clientHeight + 1;
+    const shrink = min => {
+      let f = 1;
+      pg.style.fontSize = '';
+      while (over() && f > min) {
+        f *= 0.96;
+        pg.style.fontSize = base * f + 'px';
+      }
+      return !over();
+    };
     if (shrink(0.88)) return;
-    for (const o of opts) { o.style.display = 'none'; if (shrink(0.88)) return; }
+    for (const o of opts) {
+      o.style.display = 'none';
+      if (shrink(0.88)) return;
+    }
     shrink(0.62);
   });
 }
-function jLeaf(front, back, cls) { const d = document.createElement('div'); d.className = 'leaf ' + cls; d.innerHTML = `<div class="face">${front}</div><div class="face bk">${back}</div>`; return d; }
+function jLeaf(front, back, cls) {
+  const d = document.createElement('div');
+  d.className = 'leaf ' + cls;
+  d.innerHTML = `<div class="face">${front}</div><div class="face bk">${back}</div>`;
+  return d;
+}
 function jStep(dir) {
-  const sp = $('#spread'), sl = $('#sl'), sr = $('#sr'); if (!sp) return;
-  const s = V.jS, n = s + dir;
-  if (dir > 0 && s === JS_MAX) { jBusy = true; sp.style.visibility = 'hidden'; $('#bcover').classList.add('show'); V.jS = n; setTimeout(() => { jBusy = false; }, 460); return; }
-  if (dir < 0 && s === JS_MAX + 1) { jBusy = true; $('#bcover').classList.remove('show'); sp.style.visibility = 'visible'; V.jS = n; setTimeout(() => { jBusy = false; }, 460); return; }
+  const sp = $('#spread'),
+    sl = $('#sl'),
+    sr = $('#sr');
+  if (!sp) return;
+  const s = V.jS,
+    n = s + dir;
+  if (dir > 0 && s === JS_MAX) {
+    jBusy = true;
+    sp.style.visibility = 'hidden';
+    $('#bcover').classList.add('show');
+    V.jS = n;
+    setTimeout(() => {
+      jBusy = false;
+    }, 460);
+    return;
+  }
+  if (dir < 0 && s === JS_MAX + 1) {
+    jBusy = true;
+    $('#bcover').classList.remove('show');
+    sp.style.visibility = 'visible';
+    V.jS = n;
+    setTimeout(() => {
+      jBusy = false;
+    }, 460);
+    return;
+  }
   jBusy = true;
   if (dir > 0) {
-    const leaf = jLeaf(slotR(s, 'r'), slotL(n, 'l'), 'fout'); sr.innerHTML = slotR(n); sp.appendChild(leaf); jFit(sp);
-    setTimeout(() => { sl.innerHTML = slotL(n); leaf.remove(); jFit(sp); jBusy = false; }, 880);
+    const leaf = jLeaf(slotR(s, 'r'), slotL(n, 'l'), 'fout');
+    sr.innerHTML = slotR(n);
+    sp.appendChild(leaf);
+    jFit(sp);
+    setTimeout(() => {
+      sl.innerHTML = slotL(n);
+      leaf.remove();
+      jFit(sp);
+      jBusy = false;
+    }, 880);
   } else {
-    const leaf = jLeaf(slotR(n, 'r'), slotL(s, 'l'), 'fin'); sl.innerHTML = slotL(n); sp.appendChild(leaf); jFit(sp);
-    setTimeout(() => { sr.innerHTML = slotR(n); leaf.remove(); jFit(sp); jBusy = false; }, 880);
+    const leaf = jLeaf(slotR(n, 'r'), slotL(s, 'l'), 'fin');
+    sl.innerHTML = slotL(n);
+    sp.appendChild(leaf);
+    jFit(sp);
+    setTimeout(() => {
+      sr.innerHTML = slotR(n);
+      leaf.remove();
+      jFit(sp);
+      jBusy = false;
+    }, 880);
   }
   V.jS = n;
 }
 function jFlip(dir, target) {
   if (jBusy) return;
   SFX.page();
-  if (V.jS === -1) { if (dir > 0 || target != null) jOpen(); return; }
-  const to = target != null ? target : V.jS + dir; if (to === V.jS || to < -1 || to > JS_MAX + 1) return;
-  if (to === -1) { const cv = $('.cover'); if (cv) { $('#spread').style.visibility = 'hidden'; cv.classList.remove('gone', 'opening'); } V.jS = -1; jUpdateNav(); return; }
+  if (V.jS === -1) {
+    if (dir > 0 || target != null) jOpen();
+    return;
+  }
+  const to = target != null ? target : V.jS + dir;
+  if (to === V.jS || to < -1 || to > JS_MAX + 1) return;
+  if (to === -1) {
+    const cv = $('.cover');
+    if (cv) {
+      $('#spread').style.visibility = 'hidden';
+      cv.classList.remove('gone', 'opening');
+    }
+    V.jS = -1;
+    jUpdateNav();
+    return;
+  }
   // jump: show the target as a single flip
-  if (target != null && Math.abs(to - V.jS) > 1) { const dirn = to > V.jS ? 1 : -1; const sl = $('#sl'), sr = $('#sr'), sp = $('#spread'); jBusy = true;
-    if (dirn > 0) { const leaf = jLeaf(slotR(V.jS, 'r'), slotL(to, 'l'), 'fout'); sr.innerHTML = slotR(to); sp.appendChild(leaf); jFit(sp); setTimeout(() => { sl.innerHTML = slotL(to); leaf.remove(); jFit(sp); jBusy = false; }, 880); }
-    else { const leaf = jLeaf(slotR(to, 'r'), slotL(V.jS, 'l'), 'fin'); sl.innerHTML = slotL(to); sp.appendChild(leaf); jFit(sp); setTimeout(() => { sr.innerHTML = slotR(to); leaf.remove(); jFit(sp); jBusy = false; }, 880); }
-    V.jS = to; jUpdateNav(); return; }
-  jStep(to > V.jS ? 1 : -1); jUpdateNav();
+  if (target != null && Math.abs(to - V.jS) > 1) {
+    const dirn = to > V.jS ? 1 : -1;
+    const sl = $('#sl'),
+      sr = $('#sr'),
+      sp = $('#spread');
+    jBusy = true;
+    if (dirn > 0) {
+      const leaf = jLeaf(slotR(V.jS, 'r'), slotL(to, 'l'), 'fout');
+      sr.innerHTML = slotR(to);
+      sp.appendChild(leaf);
+      jFit(sp);
+      setTimeout(() => {
+        sl.innerHTML = slotL(to);
+        leaf.remove();
+        jFit(sp);
+        jBusy = false;
+      }, 880);
+    } else {
+      const leaf = jLeaf(slotR(to, 'r'), slotL(V.jS, 'l'), 'fin');
+      sl.innerHTML = slotL(to);
+      sp.appendChild(leaf);
+      jFit(sp);
+      setTimeout(() => {
+        sr.innerHTML = slotR(to);
+        leaf.remove();
+        jFit(sp);
+        jBusy = false;
+      }, 880);
+    }
+    V.jS = to;
+    jUpdateNav();
+    return;
+  }
+  jStep(to > V.jS ? 1 : -1);
+  jUpdateNav();
 }
 function jOpen() {
-  const cv = $('.cover'), sp = $('#spread'); if (!cv || !sp) return;
-  const s = curSpread(); V.jS = s; $('#sl').innerHTML = slotL(s); $('#sr').innerHTML = slotR(s);
-  sp.style.visibility = 'visible'; jFit(sp); cv.classList.add('opening'); jBusy = true;
-  setTimeout(() => { cv.classList.add('gone'); cv.classList.remove('opening'); jBusy = false; }, 900); jUpdateNav();
+  const cv = $('.cover'),
+    sp = $('#spread');
+  if (!cv || !sp) return;
+  const s = curSpread();
+  V.jS = s;
+  $('#sl').innerHTML = slotL(s);
+  $('#sr').innerHTML = slotR(s);
+  sp.style.visibility = 'visible';
+  jFit(sp);
+  cv.classList.add('opening');
+  jBusy = true;
+  setTimeout(() => {
+    cv.classList.add('gone');
+    cv.classList.remove('opening');
+    jBusy = false;
+  }, 900);
+  jUpdateNav();
 }
-function jClose() { V.jS = null; V.jFinal = false; render(); }
-function logRow(l) { return `<div class="le"><span class="d">${esc(fmtDate(l.d))}</span>${esc(l.t)}${chips(l.c, true)}</div>`; }
+function jClose() {
+  V.jS = null;
+  V.jFinal = false;
+  render();
+}
+function logRow(l) {
+  return `<div class="le"><span class="d">${esc(fmtDate(l.d))}</span>${esc(l.t)}${chips(l.c, true)}</div>`;
+}
 
 function relBar(v) {
-  const w = Math.abs(v) / 2; const pos = v >= 0;
-  return `<div class="relbar"><span class="mid"></span><i style="${pos ? 'left:50%' : 'right:50%'};width:${w}%;background:${pos ? 'var(--good)' : 'var(--bad)'}"></i></div>`;
+  const w = Math.abs(v) / 2;
+  const pos = v >= 0;
+  return (
+    `<div class="relbar"><span class="mid"></span>` +
+    `<i style="${pos ? 'left:50%' : 'right:50%'};width:${w}%;background:${pos ? 'var(--good)' : 'var(--bad)'}">` +
+    `</i></div>`
+  );
 }
 
 /* ---------- avatars ---------- */
