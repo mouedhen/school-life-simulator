@@ -1,0 +1,11 @@
+dist/
+node_modules/
+tools/archive/
+test-results/
+playwright-report/
+.claude/
+src/data.js
+src/fr.js
+tr/
+package-lock.json
+*.md
