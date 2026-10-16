@@ -3289,26 +3289,75 @@ async function endTut() {
 
 /* ---------- starting traits ---------- */
 const TRAITS = () => [
-  ['bal', L('Balanced', 'Équilibré'), L('The standard start.', 'Le départ habituel.'), { pop: 50, money: 50, grade: 55 }],
-  ['sch', L('Scholar', 'Bûcheur'), L('Strong grades, less money and fewer admirers.', 'Bonnes notes, moins d\'argent et de popularité.'), { pop: 40, money: 30, grade: 70 }],
-  ['soc', L('Social', 'Social'), L('Popular, but behind in class.', 'Populaire, mais en retard en classe.'), { pop: 62, money: 40, grade: 45 }],
-  ['hus', L('Hustler', 'Débrouillard'), L('Cash in your pocket, average at everything else.', 'De l\'argent en poche, moyen partout ailleurs.'), { pop: 45, money: 110, grade: 50 }],
-  ['rnd', L('Surprise me', 'Surprends-moi'), L('A random year: random stats and a few random first impressions of classmates.', 'Une année au hasard : stats aléatoires et quelques premières impressions de camarades au hasard.'), null],
+  [
+    'bal',
+    L('Balanced', 'Équilibré'),
+    L('The standard start.', 'Le départ habituel.'),
+    { pop: 50, money: 50, grade: 55 },
+  ],
+  [
+    'sch',
+    L('Scholar', 'Bûcheur'),
+    L('Strong grades, less money and fewer admirers.', "Bonnes notes, moins d'argent et de popularité."),
+    { pop: 40, money: 30, grade: 70 },
+  ],
+  [
+    'soc',
+    L('Social', 'Social'),
+    L('Popular, but behind in class.', 'Populaire, mais en retard en classe.'),
+    { pop: 62, money: 40, grade: 45 },
+  ],
+  [
+    'hus',
+    L('Hustler', 'Débrouillard'),
+    L('Cash in your pocket, average at everything else.', "De l'argent en poche, moyen partout ailleurs."),
+    { pop: 45, money: 110, grade: 50 },
+  ],
+  [
+    'rnd',
+    L('Surprise me', 'Surprends-moi'),
+    L(
+      'A random year: random stats and a few random first impressions of classmates.',
+      'Une année au hasard : stats aléatoires et quelques premières impressions de camarades au hasard.',
+    ),
+    null,
+  ],
 ];
 function applyTrait(S, id, p, ngp) {
-  const T = TRAITS(); let tr = T.find(x => x[0] === id) || T[0]; const clamp = (v, a, b) => Math.max(a, Math.min(b, Math.round(v)));
+  const T = TRAITS();
+  let tr = T.find(x => x[0] === id) || T[0];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, Math.round(v)));
   let st = tr[3];
   if (!st) {
-    const pool = T.filter(x => x[3]); st = Object.assign({}, pool[Math.floor(Math.random() * pool.length)][3]);
-    st.pop = clamp(st.pop + (Math.random() * 12 - 6), 35, 70); st.money = clamp(st.money + (Math.random() * 30 - 15), 20, 130); st.grade = clamp(st.grade + (Math.random() * 12 - 6), 40, 75);
-    const kids = E.metKids(S).slice().sort(() => Math.random() - 0.5);
-    kids.slice(0, 3).forEach(n => { S.rel[n] += 12; S.min[n] = Math.min(S.min[n], S.rel[n]); });
-    kids.slice(3, 5).forEach(n => { S.rel[n] -= 8; S.min[n] = Math.min(S.min[n], S.rel[n]); });
+    const pool = T.filter(x => x[3]);
+    st = Object.assign({}, pool[Math.floor(Math.random() * pool.length)][3]);
+    st.pop = clamp(st.pop + (Math.random() * 12 - 6), 35, 70);
+    st.money = clamp(st.money + (Math.random() * 30 - 15), 20, 130);
+    st.grade = clamp(st.grade + (Math.random() * 12 - 6), 40, 75);
+    const kids = E.metKids(S)
+      .slice()
+      .sort(() => Math.random() - 0.5);
+    kids.slice(0, 3).forEach(n => {
+      S.rel[n] += 12;
+      S.min[n] = Math.min(S.min[n], S.rel[n]);
+    });
+    kids.slice(3, 5).forEach(n => {
+      S.rel[n] -= 8;
+      S.min[n] = Math.min(S.min[n], S.rel[n]);
+    });
   }
-  S.pop = st.pop; S.money = st.money; S.grade = st.grade; S.startGrade = st.grade; S.trait = tr[0];
+  S.pop = st.pop;
+  S.money = st.money;
+  S.grade = st.grade;
+  S.startGrade = st.grade;
+  S.trait = tr[0];
   if (ngp && p && p.runs && p.runs.length) {
-    S.money += 20; const f = (p.runs[p.runs.length - 1].friends || [])[0];
-    if (f && S.rel[f] != null) { S.rel[f] += 20; S.min[f] = Math.min(S.min[f], S.rel[f]); }
+    S.money += 20;
+    const f = (p.runs[p.runs.length - 1].friends || [])[0];
+    if (f && S.rel[f] != null) {
+      S.rel[f] += 20;
+      S.min[f] = Math.min(S.min[f], S.rel[f]);
+    }
     S.ngBonus = 1;
   }
 }
