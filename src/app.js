@@ -299,7 +299,7 @@ const Store = {
 };
 
 /* ---------- app state ---------- */
-let S = null; const V = { tab: 'today', modal: null, filter: 'all', q: '', calM: 0, res: null, evIdx: null, sub: null, seen: [] }; window.__V = V; window.__S = () => S;
+let S = null; const V = { tab: 'today', modal: null, filter: 'all', sort: 'def', q: '', calM: 0, res: null, evIdx: null, sub: null, seen: [] }; window.__V = V; window.__S = () => S;
 
 function pretty(f) { return String(f).toLowerCase().replace(/_/g, ' '); }
 function chipHtml(c) {
@@ -311,6 +311,7 @@ function chipHtml(c) {
     case 'ripple': return `<span class="chip rip">${esc(c.n.split(' ')[0])} ${c.v > 0 ? '+' : ''}${c.v}</span>`;
     case 'gossip': return `<span class="chip down">Gossip +${c.v}</span>`;
     case 'flag': return `<span class="chip flag">★ ${esc(pretty(c.n))}</span>`;
+    case 'unlock': return `<span class="chip flag">🔓 ${LANG === 'fr' ? 'Boutique' : 'Shop'}: ${esc(tr(c.n))}</span>`;
   }
   return '';
 }
@@ -416,6 +417,7 @@ function diary(l) {
   if (m = x.match(/^Spent time with (.+?): (.+)$/)) return 'I spent time with ' + fn1(m[1]) + ': ' + lc1(m[2]) + '. It felt good to just be together.';
   if (x === 'Riley\'s hidden card') return 'I opened Riley\'s card on the worst day. It said exactly what I needed to hear.';
   if (m = x.match(/^Worked: (.+)$/)) return 'I worked a shift today (' + lc1(m[1]) + '). My feet hurt, but my wallet is happier.';
+  if (m = x.match(/^Met (.+)$/)) return 'I met ' + fn1(m[1]) + ' today. Maybe we will get along.';
   if (m = x.match(/^Bought (.+)$/)) return 'I treated myself and bought ' + lc1(m[1]) + '.';
   if (m = x.match(/^Used (.+)$/)) return 'I used my ' + lc1(m[1]) + '.';
   if (m = x.match(/^Gave (.+) to (.+)$/)) return 'I gave ' + fn1(m[2]) + ' a ' + lc1(m[1]) + '. I hope they liked it.';
@@ -585,7 +587,7 @@ function plEnd(good) {
 }
 function endPage(k) {
   const x = E.stats(S); const nm = myName();
-  const kids = E.KIDS.slice().sort((a, b) => S.rel[b] - S.rel[a]); const best = kids[0], worst = kids[kids.length - 1];
+  const kids = E.metKids(S).slice().sort((a, b) => S.rel[b] - S.rel[a]); const best = kids[0], worst = kids[kids.length - 1];
   const day = E.dayOf(S).d; const over = S.over && !S.ending;
   const en = S.ending ? E.ENDBY[S.ending.id] : null; const epi = S.ending ? S.ending.epi.map(id => E.ENDBY[id]).filter(Boolean) : [];
   const h = t => `<h4 class="nar">${esc(t)}</h4>`;
@@ -727,15 +729,23 @@ function avatar(name, size) {
   return `<svg class="av" role="img" aria-label="${ea(name)}" style="width:${sz}px;height:${sz}px" viewBox="0 0 64 64"><clipPath id="avc${h}"><circle cx="32" cy="32" r="32"/></clipPath><g clip-path="url(#avc${h})"><rect width="64" height="64" fill="${bg}"/>${back}${neck}${shirt}${ear}${face}${cheek}${ey}${mouth}${front}${ac}</g></svg>`;
 }
 
+const ICON = { 'Notebook & pen set': '📓', 'Sticker pack': '⭐', 'Snack': '🍪', 'Fancy snack box': '🍱', 'Hair clips / accessory': '🎀', 'Bracelet': '📿', 'Sketchbook': '🎨', 'Used paperback': '📖', 'Board game': '🎲', 'Sports ball': '⚽', 'Headphones': '🎧', 'Phone charm': '🔑', 'Reusable water bottle': '🧴', 'Small plush': '🧸', 'Gift card': '💳', 'Craft kit': '✂️', 'Bicycle tune-up': '🚲', 'Movie ticket': '🎟️', 'Café drink': '☕', 'Mystery box': '🎁', 'Study guide': '📘', 'Flashcards': '🗂️', 'Calculator': '🧮', 'Tutoring session': '🧑‍🏫', 'Lucky charm': '🍀', 'Chocolate box': '🍫', 'Houseplant': '🪴', 'Comic book': '📚', 'Poster': '🖼️', 'Friendship bracelet kit': '🧵', 'Concert ticket': '🎫', 'Lunch voucher': '🥪', 'Sunglasses': '🕶️', 'Hoodie': '🧥', 'Stylish backpack': '🎒', 'Smartwatch': '⌚', 'Handmade gift': '💝', 'Cooking knife': '🔪', "Dad's toolbox": '🧰', "Riley's hidden card": '🃏', "Max's lucky controller": '🎮', "Oliver's varsity jacket": '🏀', "Sophie's planner": '📒', 'Club badge': '🏅', 'Lost-and-found scarf': '🧣', 'Charity wristband': '🎗️', 'Magnifying glass': '🔍', 'Friendship pin': '📌', 'Sorry card pack': '💌', 'Thank-you basket': '🧺', 'Holiday sweater': '🎄', 'Volunteer tee': '👕', 'Brave badge': '🛡️', 'Fancy pen': '🖋️', 'Pocket journal': '📔', 'Showcase apron': '🍳', 'Group photo frame': '📸' };
+const KIND_ICON = { gift: '🎁', cosmetic: '👕', perm: '⭐', use: '✨', booster: '🚀', prep: '📝' };
+const itemIcon = (n, kind) => ICON[n] || KIND_ICON[kind] || '🎁';
+const SORTS = [['def', 'Default', 'Défaut'], ['pop', 'Most popular', 'Plus populaires'], ['unpop', 'Least popular', 'Moins populaires'], ['best', 'Best relationship', 'Meilleure relation'], ['worst', 'Worst relationship', 'Pire relation']];
 function viewPeople() {
   const f = V.filter; const q = V.q.toLowerCase();
-  const list = D().chars.filter(c => (f === 'all' || (f === 'kid' && c.role === 'kid') || (f === 'fam' && c.role === 'fam') || (f === 'teach' && c.role === 'teach')) && (!q || c.n.toLowerCase().includes(q)));
+  const metAll = D().chars.filter(c => E.isMet(S, c.n)); const unmet = D().chars.length - metAll.length;
+  let list = metAll.filter(c => (f === 'all' || (f === 'kid' && c.role === 'kid') || (f === 'fam' && c.role === 'fam') || (f === 'teach' && c.role === 'teach')) && (!q || c.n.toLowerCase().includes(q)));
+  const byPop = dir => (a, b) => (a.pop == null) - (b.pop == null) || (a.pop == null ? 0 : dir * (b.pop - a.pop)); // family and teachers have no school popularity: they go last
+  if (V.sort === 'pop') list.sort(byPop(1)); else if (V.sort === 'unpop') list.sort(byPop(-1)); else if (V.sort === 'best') list.sort((a, b) => S.rel[b.n] - S.rel[a.n]); else if (V.sort === 'worst') list.sort((a, b) => S.rel[a.n] - S.rel[b.n]);
   const seg = [['all', 'All'], ['kid', 'Classmates'], ['fam', 'Family'], ['teach', 'Teachers']].map(([k, n]) => `<button class="${f === k ? 'on' : ''}" data-act="filter" data-v="${k}">${t(n)}</button>`).join('');
   return `<div class="seg">${seg}</div><input type="search" id="q" placeholder="${t('Search')}" value="${ea(V.q)}">
+  <div class="seg sortseg" aria-label="${L('Sort', 'Trier')}">${SORTS.map(([k, en, fr]) => `<button class="${V.sort === k ? 'on' : ''}" data-act="sort" data-v="${k}">${LANG === 'fr' ? fr : en}</button>`).join('')}</div>
   <div class="card" style="padding:4px 12px">${list.map(c => {
     const v = S.rel[c.n]; const lab = E.relLabel(v);
     return `<button class="person" data-act="person" data-v="${ea(c.n)}">${avatar(c.n, 40)}<div class="pmid"><div class="nm">${esc(c.n)}</div><div class="pill ${lab}">${relT(lab)} · ${v > 0 ? '+' : ''}${v}</div></div>${relBar(v)}</button>`;
-  }).join('')}</div>`;
+  }).join('')}${list.length ? '' : `<p class="muted small" style="padding:10px 0">${L('Nobody matches.', 'Personne ne correspond.')}</p>`}</div>${unmet > 0 ? `<p class="muted small" style="margin:10px 2px">👋 ${L('You know ' + metAll.length + ' of ' + D().chars.length + ' people. New faces show up as the days go by.', 'Tu connais ' + metAll.length + ' personnes sur ' + D().chars.length + '. De nouveaux visages arrivent au fil des jours.')}</p>` : ''}`;
 }
 const D = () => E.D;
 
@@ -743,12 +753,13 @@ function viewShop() {
   const items = E.SHOP.map(it => {
     const owned = it.kind === 'perm' ? (S.perm[it.n] ? 1 : 0) : (S.inv[it.n] || 0);
     const can = S.money >= it.price && !(it.kind === 'perm' && owned);
-    return `<div class="card item" style="margin:0"><div class="top"><span>${esc(it.n)}</span><span class="price">$${it.price}</span></div><div class="muted small">${esc(it.use || it.note)}</div>
+    if (E.itemLocked(S, it)) return `<div class="card item locked" style="margin:0"><div class="top"><span><span class="ico">🔒</span> ???</span><span class="price">$${it.price}</span></div><div class="muted small">${L('Unlocks through an event: ', 'Se débloque par un événement : ')}${esc(tr(it.hint))}</div></div>`;
+    return `<div class="card item" style="margin:0"><div class="top"><span><span class="ico">${itemIcon(it.n, it.kind)}</span> ${esc(it.n)}</span><span class="price">$${it.price}</span></div><div class="muted small">${esc(it.use || it.note)}</div>
     <div class="row" style="align-items:center;justify-content:space-between"><span class="small muted">${owned ? t('Owned') + ' ×' + owned : ''}</span><button class="btn small" data-act="buy" data-v="${it.id}" ${can ? '' : 'disabled'}>${t('Buy')}</button></div></div>`;
   }).join('');
   const bag = Object.keys(S.inv).filter(k => S.inv[k] > 0);
   const perms = Object.keys(S.perm);
-  const bagHtml = (bag.length || perms.length) ? `<div class="ib">${bag.map(k => { const it = E.SHOP.find(x => x.n === k); const usable = it && ['use', 'cosmetic'].includes(it.kind) && !(it.kind === 'cosmetic' && S.worn[k]); return `<div class="card" style="margin:0;padding:9px"><b>${esc(k)}</b> ×${S.inv[k]}${usable ? `<div class="row" style="margin-top:6px"><button class="btn small" data-act="use" data-v="${ea(k)}">${it.kind === 'cosmetic' ? t('Wear') : t('Use')}</button></div>` : `<div class="small muted">${it && it.kind === 'prep' ? 'Auto-used on study checks' : 'Gift / hangout item'}</div>`}</div>`; }).join('')}${perms.map(k => `<div class="card" style="margin:0;padding:9px"><b>${esc(tr(k))}</b><div class="small muted">Permanent</div></div>`).join('')}</div>` : `<div class="muted">${t('Empty')}</div>`;
+  const bagHtml = (bag.length || perms.length) ? `<div class="ib">${bag.map(k => { const it = E.SHOP.find(x => x.n === k); const usable = it && ['use', 'cosmetic'].includes(it.kind) && !(it.kind === 'cosmetic' && S.worn[k]); return `<div class="card" style="margin:0;padding:9px"><span class="ico">${itemIcon(k, it && it.kind)}</span> <b>${esc(k)}</b> ×${S.inv[k]}${usable ? `<div class="row" style="margin-top:6px"><button class="btn small" data-act="use" data-v="${ea(k)}">${it.kind === 'cosmetic' ? t('Wear') : t('Use')}</button></div>` : `<div class="small muted">${it && it.kind === 'prep' ? 'Auto-used on study checks' : 'Gift / hangout item'}</div>`}</div>`; }).join('')}${perms.map(k => `<div class="card" style="margin:0;padding:9px"><span class="ico">${itemIcon(k, 'perm')}</span> <b>${esc(tr(k))}</b><div class="small muted">Permanent</div></div>`).join('')}</div>` : `<div class="muted">${t('Empty')}</div>`;
   return `<div class="card"><h3>${t('Bag')}</h3>${bagHtml}</div><h3 style="margin:14px 0 8px">${t('Shop')}</h3><div class="grid2">${items}</div><p class="small" style="margin:14px 0 0">${inkHtml('k4', CLUES().k4)}</p>`;
 }
 
@@ -779,7 +790,7 @@ function showBond(who) {
 }
 function showCook(rid) {
   const r = E.RECIPES.find(x => x.id === rid); if (!r) return;
-  const friends = E.KIDS.slice().filter(n => S.rel[n] >= 0).sort((a, b) => S.rel[b] - S.rel[a]).slice(0, 8);
+  const friends = E.metKids(S).slice().filter(n => S.rel[n] >= 0).sort((a, b) => S.rel[b] - S.rel[a]).slice(0, 8);
   const btn = (who, label, sub) => `<button class="choice" data-act="cookfor" data-v="${ea(rid + '|' + who)}"><span class="lt">·</span><span>${label}${sub ? ` <span class="muted small">${sub}</span>` : ''}</span></button>`;
   openModal(head(L('Cook ', 'Cuisiner ') + tr(r.n), '') + `<p class="desc">${L('Who is it for?', 'Pour qui ?')}</p><div class="choices">${btn('self', L('Myself', 'Moi-même'), '')}${btn('family', L('The family', 'La famille'), '')}${friends.map(n => btn(n, esc(n), relT(E.relLabel(S.rel[n])))).join('')}</div><div class="row" style="margin-top:12px"><button class="btn ghost" data-act="close">${t('Close')}</button></div>`);
 }
@@ -885,8 +896,9 @@ function showEvent() {
   V.modal = () => {
     if (V.mg) return mgHtml(ev);
     if (V.res) return resultHtml(ev);
-    if (V.sub && V.sub.type === 'gift') return head(ev.title, tag) + `<p class="desc">${LANG === 'fr' ? 'Choisis un objet.' : 'Pick an item.'}</p><div class="ib">${E.giftItems(S).map(it => `<button class="btn" data-act="evgift" data-v="${ea(it.n)}">${esc(it.n)}<small>×${S.inv[it.n]}</small></button>`).join('')}</div><div class="row" style="margin-top:12px"><button class="btn ghost" data-act="evback">${t('Back')}</button></div>`;
-    const who = ev.who && ev.who.length ? `<div class="who">${ev.who.map(w => `<span><b>${esc(w.role)}</b>${esc(w.names.join(', '))}</span>`).join('')}</div>` : '';
+    if (V.sub && V.sub.type === 'gift') return head(ev.title, tag) + `<p class="desc">${LANG === 'fr' ? 'Choisis un objet.' : 'Pick an item.'}</p><div class="ib">${E.giftItems(S).map(it => `<button class="btn" data-act="evgift" data-v="${ea(it.n)}">${itemIcon(it.n, it.kind)} ${esc(it.n)}<small>×${S.inv[it.n]}</small></button>`).join('')}</div><div class="row" style="margin-top:12px"><button class="btn ghost" data-act="evback">${t('Back')}</button></div>`;
+    const newf = ev.met && ev.met.length ? `<div class="newface">👋 ${LANG === 'fr' ? 'Nouveau contact' : 'New contact'}: <b>${ev.met.map(esc).join(', ')}</b></div>` : '';
+    const who = newf + (ev.who && ev.who.length ? `<div class="who">${ev.who.map(w => `<span><b>${esc(w.role)}</b>${esc(w.names.join(', '))}</span>`).join('')}</div>` : '');
     return head(ev.title, tag) + `<p class="desc">${esc(ev.desc)}</p>${isVoiced(ev) ? `<div class="row" style="margin-bottom:8px">${listenBtn()}</div>` : ''}${who}<div class="choices">${ev.choices.map((c, i) => `<button class="choice ${c.disabled ? 'dis' : ''}" data-act="pick" data-v="${i}" ${c.disabled ? 'aria-disabled="true"' : ''}><span class="l">${c.l}</span><span>${esc(c.x)}${c.chance != null ? `<small>~${c.chance}% ${LANG === 'fr' ? 'de chances qu\'il/elle accepte' : 'chance to accept'}</small>` : ''}${c.hint ? `<span class="hint">${esc(c.hint)}</span>` : ''}${c.disabled ? `<small>${esc(c.why || '')}</small>` : ''}</span></button>`).join('')}</div>`;
   };
   V.evCur = ev;
@@ -961,7 +973,7 @@ function applyTrait(S, id, p, ngp) {
   if (!st) {
     const pool = T.filter(x => x[3]); st = Object.assign({}, pool[Math.floor(Math.random() * pool.length)][3]);
     st.pop = clamp(st.pop + (Math.random() * 12 - 6), 35, 70); st.money = clamp(st.money + (Math.random() * 30 - 15), 20, 130); st.grade = clamp(st.grade + (Math.random() * 12 - 6), 40, 75);
-    const kids = E.KIDS.slice().sort(() => Math.random() - 0.5);
+    const kids = E.metKids(S).slice().sort(() => Math.random() - 0.5);
     kids.slice(0, 3).forEach(n => { S.rel[n] += 12; S.min[n] = Math.min(S.min[n], S.rel[n]); });
     kids.slice(3, 5).forEach(n => { S.rel[n] -= 8; S.min[n] = Math.min(S.min[n], S.rel[n]); });
   }
@@ -1092,7 +1104,7 @@ const lineHtml = l => /^[^:]{1,40}: “/.test(l) ? `<p class="say">${esc(l)}</p>
 function endingScreen() {
   const en = E.ENDBY[S.ending.id]; const x = E.stats(S);
   const epi = S.ending.epi.map(id => E.ENDBY[id]).filter(Boolean);
-  const top = E.KIDS.slice().sort((a, b) => S.rel[b] - S.rel[a]).slice(0, 4);
+  const top = E.metKids(S).slice().sort((a, b) => S.rel[b] - S.rel[a]).slice(0, 4);
   return `<div class="app"><div class="over" style="text-align:left"><div class="brand">${t('Your ending')} · ${fmtDate(E.dayOf(S).d)}</div><h1 style="color:${en.bad ? 'var(--bad)' : 'var(--fg)'};margin:8px 0">${esc(en.n)}</h1>
   <div class="end-quote">${esc(en.q)}</div>${en.body ? `<p>${esc(en.body)}</p>` : ''}<p class="muted"><i>Moral: ${esc(en.moral)}</i></p><p class="small">${inkHtml('k7', CLUES().k7)}</p>
   ${epi.map(e => `<div class="card"><b>${esc(e.n)}</b><div class="end-quote" style="font-size:.95em">${esc(e.q)}</div><div class="small muted"><i>${esc(e.moral)}</i></div></div>`).join('')}
@@ -1172,7 +1184,7 @@ function pgStart(id) {
   const off = E.phoneOff(S); if (off) { toast(off); return; }
   pgStop(); const r = pgRng(pgSeed() + id.length * 97 + (S.pgN || 0)); const g = { id, i: 0, score: 0, ans: null, done: false, res: null };
   if (id === 'reply') g.q = pgShuffle(RF, r).slice(0, 5);
-  else if (id === 'who') { const kids = E.KIDS.filter(n => WV[n.split(' ')[0]]); g.q = pgShuffle(kids, r).slice(0, 5).map(n => { const v = WV[n.split(' ')[0]]; const others = pgShuffle(kids.filter(k => WV[k.split(' ')[0]] !== v), r).slice(0, 2); const line = WS[v][Math.floor(r() * 3)]; return { line, right: n, opts: pgShuffle([n].concat(others), r) }; }); }
+  else if (id === 'who') { const kids = E.metKids(S).filter(n => WV[n.split(' ')[0]]); g.q = pgShuffle(kids, r).slice(0, 5).map(n => { const v = WV[n.split(' ')[0]]; const others = pgShuffle(kids.filter(k => WV[k.split(' ')[0]] !== v), r).slice(0, 2); const line = WS[v][Math.floor(r() * 3)]; return { line, right: n, opts: pgShuffle([n].concat(others), r) }; }); }
   else if (id === 'emoji') g.q = pgShuffle(EM, r).slice(0, 5).map(e => ({ e: e[0], right: e[1], opts: pgShuffle([e[1]].concat(e[2].slice(0, 3)), r) }));
   else if (id === 'tap') { g.left = 15; }
   V.pg = g; V.ph = { name: '@play' }; renderModal(); pgArm();
@@ -1258,7 +1270,7 @@ function phoneHtml() {
     <div class="ib">${acts.map(a => `<button class="btn small ${a.ok ? '' : 'dis'}" data-act="phact" data-v="${a.id}" ${a.ok ? '' : `data-why="${ea(a.why)}"`}>${L(PHL[a.id][0], PHL[a.id][1])}</button>`).join('')}</div>
     <div class="row" style="margin-top:10px"><button class="btn ghost small" data-act="person" data-v="${ea(nm)}">${L('Open profile', 'Voir le profil')}</button></div>`;
   }
-  const names = E.KIDS.concat(E.FAM);
+  const names = E.metOf(S, E.KIDS.concat(E.FAM));
   const act = names.filter(n => P.th[n] && P.th[n].length).sort((a, b) => (P.un[b] || 0) - (P.un[a] || 0) || (P.last[b] || 0) - (P.last[a] || 0));
   const rest = names.filter(n => !act.includes(n));
   const prev = n => { const th = P.th[n] || []; const m = th[th.length - 1]; if (!m) return ''; const x = m.f === 'sys' ? (m.t || '') : m.t; return (m.f === 'me' ? L('You: ', 'Toi : ') : '') + (x || ''); };
@@ -1278,7 +1290,7 @@ async function summaryText() {
   const p = await Store.prefs(); const lines = [];
   lines.push('School Life Simulator — run summary (' + (LANG === 'fr' ? 'FR' : 'EN') + ')');
   if (S) {
-    const kids = E.KIDS.slice().sort((a, b) => S.rel[b] - S.rel[a]); const sg = n => (S.rel[n] > 0 ? '+' : '') + S.rel[n];
+    const kids = E.metKids(S).slice().sort((a, b) => S.rel[b] - S.rel[a]); const sg = n => (S.rel[n] > 0 ? '+' : '') + S.rel[n];
     lines.push('Date in game: ' + E.dayOf(S).d + ' (day ' + (S.di + 1) + '/' + E.DAYS.length + ')');
     lines.push('POP ' + S.pop + ' · Grade ' + S.grade + ' · $' + S.money);
     lines.push('Status: ' + (S.ending ? 'ending "' + E.ENDBY[S.ending.id].n + '"' : S.over ? 'game over (POP 0)' : 'in progress'));
@@ -1413,6 +1425,7 @@ async function onClick(e) {
     case 'jclose': jClose(); break;
     case 'tab': V.tab = v; if (v === 'journal') V.jS = null; if (v === 'cal') { const cur = E.dayOf(S).d; V.calM = Math.max(0, MONTHS.findIndex(([y, m]) => cur.startsWith(`${y}-${String(m + 1).padStart(2, '0')}`))); } closeModal(); render(); window.scrollTo(0, 0); break;
     case 'filter': V.filter = v; render(); break;
+    case 'sort': V.sort = v; render(); break;
     case 'calm': V.calM = +v; render(); break;
     case 'openev': showEvent(); break;
     case 'close': Voice.stop(); if (V.tut != null) { endTut(); break; } closeModal(); if (S) render(); break;

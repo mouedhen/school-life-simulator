@@ -68,4 +68,29 @@ ok(gifts > 0, 'gifts are tracked per giver (' + gifts + ')');
   ok(mk(S => { S.phoneN = 10; S.ih.A = { hangout: 25 }; E.KIDS.slice(0, 9).forEach(n => S.rel[n] = 45); }).includes('ph_face'), 'ending: The Face-to-Face Year');
   ok(E.ENDINGS.filter(e => e.id.startsWith('ph_')).length === 7, 'seven phone endings exist');
 }
+{
+  // meeting people: the circle grows through day events; old saves know everyone
+  const S = E.newGame(21); const n0 = Object.keys(S.met).length;
+  ok(n0 === 14 && E.FAM.every(n => S.met[n]) && S.met['Maya Bennett'], 'start: family, Maya and 7 classmates are known (' + n0 + ')');
+  ok(E.metKids(S).length === 8 && E.KIDS.length === 30, 'metKids(S) lists the 8 known classmates');
+  let g = 0, firstNew = null; while (!S.over && S.phase !== 'ending' && g++ < 3000 && S.di < 60) {
+    if (S.phase === 'event') { const ev = E.buildEvent(S); if (ev.met && ev.met.length && !firstNew) firstNew = [S.di, ev.met[0]]; if (ev.choices) E.choose(S, Math.max(0, ev.choices.findIndex(c => !c.disabled && !c.hide))); else E.finishEvent(S, ev); }
+    else E.endDay(S);
+  }
+  ok(firstNew && firstNew[0] >= 2, 'the first new classmate appears from day 3 (' + JSON.stringify(firstNew) + ')');
+  ok(Object.keys(S.met).length >= 24, 'about one new person every 4-5 days (' + Object.keys(S.met).length + ' by day 60)');
+  const un = E.KIDS.find(n => !S.met[n]);
+  if (un) { ok(!E.phoneCan(S, un), 'unmet people cannot be texted'); ok(!!(E.interact(S, un, 'talk') || {}).err, 'unmet people cannot be talked to'); }
+  const old = E.newGame(22); delete old.met; ok(E.metKids(old).length === 30 && E.isMet(old, 'Zara Khan' in E.CH ? 'Zara Khan' : E.KIDS[3]), 'old saves without S.met know everyone');
+}
+{
+  // event-unlocked shop items
+  const S = E.newGame(23); S.money = 300; const it = E.SHOP.find(x => x.n === 'Club badge');
+  ok(it && E.itemLocked(S, it), 'Club badge starts locked');
+  ok(!!(E.buy(S, it.id) || {}).err, 'a locked item cannot be bought');
+  const ch = []; E.applyFx(S, E.fxs('f:CLUB_MEMBER'), { T: 'Maya Bennett' }, ch);
+  ok(ch.some(c => c.k === 'unlock' && c.n === 'Club badge'), 'the event that sets CLUB_MEMBER shows an unlock chip');
+  ok(!E.itemLocked(S, it) && !(E.buy(S, it.id) || {}).err && S.inv['Club badge'] === 1, 'after the event it can be bought');
+  ok(E.SHOP.filter(x => x.flag).length === 14 && E.SHOP.every(x => x.kind), 'fourteen event items, all with a kind');
+}
 console.log(fails ? fails + ' FAILED' : 'ALL PASSED'); process.exit(fails ? 1 : 0);

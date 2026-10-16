@@ -237,7 +237,26 @@ const EXTRA = [
   ['Smartwatch', 60, 'perm', 'Permanent: one extra time block every single day.'],
 ];
 EXTRA.forEach(x => { SHOP.push({ id: SHOP.length, n: x[0], price: x[1], note: x[3] }); SHOPKIND[x[0]] = [x[2], x[3]]; });
+// shop items that stay locked until an event sets their flag: [name, price, kind, note, flag, hint]
+const EVENT_ITEMS = [
+  ['Club badge', 6, 'cosmetic', 'Wear it: Popularity +1 (once).', 'CLUB_MEMBER', 'Join a club at school.'],
+  ['Lost-and-found scarf', 8, 'cosmetic', 'Wear it: Popularity +1 (once).', 'RETURNED_WALLET', 'Do the honest thing when you find something.'],
+  ['Charity wristband', 5, 'gift', 'A small gift that says you care.', 'FUNDRAISER_IDEA', 'Help a fundraiser.'],
+  ['Magnifying glass', 9, 'gift', 'A playful gift for curious people.', 'INVESTIGATED_RUMOUR', 'Check a rumour before you believe it.'],
+  ['Friendship pin', 4, 'gift', 'A tiny pin for someone you include.', 'INCLUDED_SOMEONE', 'Include someone who was left out.'],
+  ['Sorry card pack', 5, 'gift', 'Cards that help you say the hard thing.', 'APOLOGIZED_SPECIFIC', 'Apologise for something specific.'],
+  ['Thank-you basket', 12, 'gift', 'A warm gift for someone who helped you.', 'PEDAGO_HELPED', 'Get help from a teacher.'],
+  ['Holiday sweater', 18, 'cosmetic', 'Wear it: Popularity +1 (once).', 'HOLIDAY_FAMILY', 'Spend a holiday with your family.'],
+  ['Volunteer tee', 12, 'cosmetic', 'Wear it: Popularity +1 (once).', 'HOLIDAY_VOLUNTEER', 'Volunteer during a break.'],
+  ['Brave badge', 7, 'cosmetic', 'Wear it: Popularity +1 (once).', 'STOOD_UP', 'Stand up for someone.'],
+  ['Fancy pen', 8, 'gift', 'A pen with a very faint ink.', 'CLUE_FOUND', 'Notice something strange.'],
+  ['Pocket journal', 7, 'gift', 'A thoughtful gift for someone you advised.', 'GAVE_ADVICE', 'Give someone advice.'],
+  ['Showcase apron', 15, 'cosmetic', 'Wear it: Popularity +1 (once).', 'HELPED_AT_SHOWCASE', 'Help at the cooking showcase.'],
+  ['Group photo frame', 9, 'gift', 'A frame for a photo everyone is in.', 'INCLUSIVE_PHOTO', 'Make sure everyone is in the photo.'],
+];
+EVENT_ITEMS.forEach(x => { SHOP.push({ id: SHOP.length, n: x[0], price: x[1], note: x[3], flag: x[4], hint: x[5] }); SHOPKIND[x[0]] = [x[2], x[3]]; });
 SHOP.forEach(s => { const k = SHOPKIND[s.n] || ['gift', '']; s.kind = k[0]; s.use = k[1]; });
+const itemLocked = (S, it) => !!it.flag && !F(S, it.flag);
 const SHOPBYNAME = {}; SHOP.forEach(s => SHOPBYNAME[s.n] = s);
 
 const JOBS = [
@@ -308,6 +327,10 @@ function newGame(seed, ngp) {
     log: [], over: null, ending: null, rcool: -9, lastRand: -9, asks: {}, ballTry: 0, nrand: 0, seenEnd: [],
   };
   D.chars.forEach(c => { S.rel[c.n] = c.role === 'fam' ? 30 : c.role === 'teach' ? 10 : 0; S.min[c.n] = S.rel[c.n]; });
+  S.met = {}; FAM.forEach(n => S.met[n] = 1); S.met[MAYA] = 1;
+  S.order = shuffle(KIDS.filter(n => n !== MAYA), mul(hash(seed + ':met')));
+  S.order.slice(0, START_KIDS - 1).forEach(n => S.met[n] = 1); S.order = S.order.filter(n => !S.met[n]);
+  S.nextIntro = 2;
   S.pend = preDayEvent(S);
   S.blocks = blocksFor(S);
   S.maxBlocks = S.blocks;
@@ -315,6 +338,18 @@ function newGame(seed, ngp) {
 }
 const F = (S, n) => S.flags[n] || 0;
 const setFlag = (S, n) => { S.flags[n] = (S.flags[n] || 0) + 1; };
+/* ---------- meeting people: the circle grows through events (old saves without S.met know everyone) ---------- */
+const START_KIDS = 8, INTRO_GAP = 3;
+const isMet = (S, n) => !S.met || !!S.met[n];
+const metOf = (S, arr) => S.met ? arr.filter(n => S.met[n]) : arr;
+const metKids = S => metOf(S, KIDS);
+function meet(S, n) { if (!S.met || S.met[n]) return false; S.met[n] = 1; S.metN = (S.metN || 0) + 1; return true; }
+function introCheck(S, d) { // decides, once per day, whether this day's event introduces a new classmate
+  if (!S.met || S.introDay === S.di || S.di < (S.nextIntro || 0) || d.brk) return;
+  const nxt = (S.order || []).find(n => !S.met[n]); if (!nxt) return;
+  if (!d.c.some(c => allFx(c).some(f => f.t === 'rel' && roleKey(f.who) === 'T'))) return; // the day must involve the target kid
+  S.introDay = S.di; S.introWho = nxt; S.nextIntro = S.di + INTRO_GAP + (hash(S.seed + 'ni' + S.di) % 3);
+}
 const dayOf = S => DAYS[Math.min(S.di, DAYS.length - 1)];
 function blocksFor(S) {
   let b = 3;
@@ -391,7 +426,7 @@ function npcPick(S) {
   if (globalThis.__NO_NPC) return null;
   S.cool2 = S.cool2 || {};
   const pairs = [];
-  KIDS.concat(FAM, TEACH).forEach(n => { if (S.cool2[n] != null && S.di - S.cool2[n] < 6) return; npcActs(S, n).forEach(a => { if (a !== 'gossip' || rnd(S) < 0.5) pairs.push({ who: n, act: a }); }); });
+  metOf(S, KIDS.concat(FAM, TEACH)).forEach(n => { if (S.cool2[n] != null && S.di - S.cool2[n] < 6) return; npcActs(S, n).forEach(a => { if (a !== 'gossip' || rnd(S) < 0.5) pairs.push({ who: n, act: a }); }); });
   if (!pairs.length) return null;
   const p = pick(S, pairs); S.cool2[p.who] = S.di; return p;
 }
@@ -460,9 +495,10 @@ function knownRank(S, kids) { return kids.slice().sort((a, b) => S.rel[b] - S.re
 /* ---------- day context ---------- */
 function makeCtx(S, key, subject) {
   const r = mul(hash(S.seed + ':' + key));
-  const pool = shuffle(KIDS, r);
+  const pool = shuffle(metKids(S), r);
   const warm = pool.filter(n => S.rel[n] >= 20);
-  const T = (warm.length && r() < 0.3) ? warm[Math.floor(r() * warm.length)] : pool[0];
+  let T = (warm.length && r() < 0.3) ? warm[Math.floor(r() * warm.length)] : pool[0];
+  if (S.introDay === S.di && S.introWho && key === 'd' + S.di) T = S.introWho;
   const rest = pool.filter(n => n !== T);
   const helpers = rest.filter(n => CH[n].ap >= 3);
   const H = helpers[Math.floor(r() * helpers.length)] || rest[0];
@@ -499,9 +535,9 @@ function resolve(S, ctx, who) {
     case 'MOM': return ['Mom']; case 'DAD': return ['Dad']; case 'PARENTS': return ['Mom', 'Dad'];
     case 'TM1': return [ctx.TM[0]]; case 'TM': return ctx.TM; case 'G': return ctx.G;
     case 'TEACH': return [ctx.teacher];
-    case 'DATE': return [S.ballDate || knownRank(S, KIDS)[0]];
-    case 'RIVAL': { const lo = KIDS.slice().sort((a, b) => S.rel[a] - S.rel[b])[0]; return [S.rel[lo] < 0 ? lo : ctx.T]; }
-    case 'TOP': { const t = knownRank(S, KIDS).filter(n => S.rel[n] > 0).slice(0, 3); return t.length ? t : ctx.G; }
+    case 'DATE': return [S.ballDate || knownRank(S, metKids(S))[0]];
+    case 'RIVAL': { const lo = metKids(S).slice().sort((a, b) => S.rel[a] - S.rel[b])[0]; return [S.rel[lo] < 0 ? lo : ctx.T]; }
+    case 'TOP': { const t = knownRank(S, metKids(S)).filter(n => S.rel[n] > 0).slice(0, 3); return t.length ? t : ctx.G; }
   }
   return [ctx.C];
 }
@@ -516,7 +552,7 @@ function applyFx(S, list, ctx, ch, opt) {
       case 'pop': addPop(S, f.v, ch); break;
       case 'grade': addGrade(S, f.v > 0 ? pround(S, f.v * 0.6) : f.v, ch); break;
       case 'money': addMoney(S, f.v, ch); break;
-      case 'flag': setFlag(S, f.f); if (!/^(PEDAGO)/.test(f.f)) ch.push({ k: 'flag', n: f.f }); break;
+      case 'flag': setFlag(S, f.f); if (!/^(PEDAGO)/.test(f.f)) ch.push({ k: 'flag', n: f.f }); if (F(S, f.f) === 1) SHOP.forEach(it => { if (it.flag === f.f) ch.push({ k: 'unlock', n: it.n }); }); break;
       case 'gossip': S.gossip += f.v; setFlag(S, 'GOSSIP'); ch.push({ k: 'gossip', v: f.v }); break;
       case 'rel': resolve(S, ctx, f.who).forEach(n => { addRel(S, n, f.v, ch); S.last[n] = S.di; }); break;
       case 'spill': { const t = lastRelTarget(ch); if (t) (LINKS[t] || []).slice(0, 2).forEach(([o]) => { if (CH[o].role === 'kid') addRel(S, o, ri(S, 1, 2), ch, false, true); }); break; }
@@ -549,10 +585,13 @@ function allFx(c) { return [].concat(c.fx || [], c.pass || [], c.fail || [], c.o
 function buildEvent(S) {
   const p = S.pend; if (!p) return null;
   if (p.kind === 'day') {
-    const d = dayOf(S); const ctx = makeCtx(S, 'd' + S.di, d.t);
+    const d = dayOf(S); introCheck(S, d); const ctx = makeCtx(S, 'd' + S.di, d.t);
     const choices = d.c.map((c, i) => decorate(S, c, ctx, i));
     const fxAll = [].concat(...d.c.map(allFx));
-    return { kind: 'day', title: d.t, desc: d.s, date: d.d, ctx, choices, who: describeRoles(S, ctx, fxAll), teacher: ctx.teacher };
+    const met = [];
+    if (S.introDay === S.di && S.introWho) { if (meet(S, S.introWho)) logAdd(S, 'Met ' + S.introWho, [], 'sys'); met.push(S.introWho); }
+    if (ctx.teacher && S.met) { if (meet(S, ctx.teacher)) logAdd(S, 'Met ' + ctx.teacher, [], 'sys'); }
+    return { kind: 'day', title: d.t, desc: d.s, date: d.d, ctx, choices, who: describeRoles(S, ctx, fxAll), teacher: ctx.teacher, met };
   }
   if (p.kind === 'special') {
     const sp = SPECIAL[p.id]; const ctx = makeCtx(S, 'sp' + (p.id === 'tribunal2' ? 'tribunal' : p.id), '');
@@ -578,8 +617,8 @@ function buildEvent(S) {
     return { kind: 'rand', title: e.t, desc: e.d, ctx, choices, who: describeRoles(S, ctx, [].concat(...e.c.map(allFx))), rand: true };
   }
   if (p.kind === 'ballinvite') {
-    const ranked = knownRank(S, KIDS).slice(0, 5);
-    const extra = KIDS.filter(n => !ranked.includes(n)); const r = mul(hash(S.seed + 'ballx' + S.ballTry));
+    const ranked = knownRank(S, metKids(S)).slice(0, 5);
+    const extra = metKids(S).filter(n => !ranked.includes(n)); const r = mul(hash(S.seed + 'ballx' + S.ballTry));
     const more = shuffle(extra, r).slice(0, 2);
     const names = ranked.concat(more);
     const choices = names.map((n, i) => ({ l: 'ABCDEFG'[i], x: 'Invite ' + n, who: n, ballinvite: true, chance: ballChance(S, n) }));
@@ -756,15 +795,15 @@ function chooseBall(S, c, ev) {
 }
 /* ---------- the Ball: multi-scene night ---------- */
 const BALL_STAGES = 5;
-function ballFoe(S) { const lo = KIDS.slice().sort((a, b) => S.rel[a] - S.rel[b])[0]; return S.rel[lo] < -10 ? lo : null; }
-function ballFriend(S) { return S.ballDate || knownRank(S, KIDS)[0]; }
+function ballFoe(S) { const lo = metKids(S).slice().sort((a, b) => S.rel[a] - S.rel[b])[0]; return S.rel[lo] < -10 ? lo : null; }
+function ballFriend(S) { return S.ballDate || knownRank(S, metKids(S))[0]; }
 function ballScene(S, st) {
   const ctx = makeCtx(S, 'ball' + st, ''); const fr = ballFriend(S); const foe = ballFoe(S);
   ctx.T = st === 2 ? (foe || ctx.T) : ctx.T;
   const dateTxt = S.ballDate ? S.ballDate + ' is with you tonight.' : 'You came without a date.';
   const mk = (title, desc, rows, who) => ({ kind: 'ball', st, title, desc, ctx, who: who || [], choices: rows.map((r, i) => Object.assign({ l: 'ABCDEF'[i], x: r[0], fx: fxs(r[1] || '') }, r[2] || {})) });
   if (st === 0) {
-    const lend = knownRank(S, KIDS).find(n => S.rel[n] >= 20);
+    const lend = knownRank(S, metKids(S)).find(n => S.rel[n] >= 20);
     return mk('The Ball — What to wear', 'Ball night. The gym is full of paper lanterns and the smell of hairspray. Nobody should miss tonight over money, and everybody knows it. ' + dateTxt, [
       ['Buy a new outfit or accessory ($15)', 'm-15;p+1;f:BALL_OUTFIT_BOUGHT', { dis: S.money < 15 ? 'Needs $15' : null }],
       ['Wear something you already own, and own it', 'f:BALL_OWN_OUTFIT'],
@@ -794,7 +833,7 @@ function ballScene(S, st) {
     ], [{ role: 'Rumour about', names: [T] }]);
   }
   if (st === 3) {
-    const sp = knownRank(S, KIDS).slice(0, 3);
+    const sp = knownRank(S, metKids(S)).slice(0, 3);
     return mk('The Ball — Photos and spotlight', 'The photographer waves everyone over, and the principal announces a Class Spirit award with a short speech. The spotlight swings around the room.', [
       ['Gather everyone for one big group photo', 'r:G+3;f:INCLUSIVE_PHOTO'],
       ['Pose only with the popular group', 'p+2;r:G-3;f:PHOTO_CLIQUE'],
@@ -815,7 +854,7 @@ function ballScene(S, st) {
 function ballEnd(S) { S.pend = null; S.phase = 'free'; }
 function chooseBallScene(S, c, ev) {
   const ch = [], lines = []; const ctx = ev.ctx;
-  const witnesses = n => KIDS.filter(k => k !== n && (S.rel[k] > 0 || (LINKS[n] || []).some(l => l[0] === k))).slice(0, 4);
+  const witnesses = n => metKids(S).filter(k => k !== n && (S.rel[k] > 0 || (LINKS[n] || []).some(l => l[0] === k))).slice(0, 4);
   if (c.dance) {
     const n = c.dance; const chance = S.rel[n] >= 60 ? 95 : clamp(55 + S.rel[n], 10, 90);
     if (rnd(S) * 100 < chance) { addRel(S, n, 6, ch); addPop(S, 1, ch); setFlag(S, 'BALL_DANCE'); lines.push(n + ' laughed and took your hand. A song later you were both out of breath.'); }
@@ -905,7 +944,7 @@ function evening(S) {
   // personal event
   if (rnd(S) < 0.2) {
     const okc = n => (S.cool[n] == null || S.di - S.cool[n] >= 3) && (S.rel[n] >= 20 || S.rel[n] <= -10);
-    let cands = KIDS.filter(okc); if (!cands.length || rnd(S) < 0.3) cands = cands.concat(FAM.filter(okc));
+    let cands = metKids(S).filter(okc); if (!cands.length || rnd(S) < 0.3) cands = cands.concat(FAM.filter(okc));
     if (rnd(S) < 0.18) cands = cands.concat(TEACH.filter(n => okc(n) || (S.rel[n] >= 14 && (S.cool[n] == null || S.di - S.cool[n] >= 6))));
     if (cands.length) {
       const n = pick(S, cands); S.cool[n] = S.di;
@@ -965,6 +1004,7 @@ function work(S, id) {
 }
 function buy(S, id) {
   const it = SHOP[id]; if (!it) return null;
+  if (itemLocked(S, it)) return { err: 'This item is still locked.' };
   if (S.money < it.price) return { err: 'Not enough money.' };
   if (it.kind === 'perm' && S.perm[it.n]) return { err: 'You already own this.' };
   const ch = []; addMoney(S, -it.price, ch);
@@ -1135,6 +1175,7 @@ function interactionList(S, name) {
 const todayN = (S, k) => S.today[k] || 0;
 function diminish(S, name, id) { const k = 'g_' + name + id; const n = S.today[k] || 0; S.today[k] = n + 1; return n === 0 ? 1 : n === 1 ? 0.5 : 0; }
 function interact(S, name, id, arg) {
+  if (!isMet(S, name)) return { err: 'You have not met them yet.' };
   if (S.phase !== 'free') return { err: 'Not now.' };
   const it = INTERBY[id]; const c = CH[name]; if (!it || !c) return null;
   const list = interactionList(S, name).find(x => x.id === id);
@@ -1185,7 +1226,7 @@ function interact(S, name, id, arg) {
       let g = ri(S, 2, 4) + (S.perm['Board game'] ? 2 : 0);
       const ok = rnd(S) * 100 < clamp(55 + v / 2, 20, 90);
       if (!ok) { lines.push('Schedules did not line up.'); g = 1; }
-      else { lines.push('A fun group activity!'); const others = shuffle(KIDS.filter(n => n !== name && S.rel[n] > -10), mul(hash(S.seed + 'g' + S.di + name))).slice(0, 2); others.forEach(o => addRel(S, o, 1, ch, false, true)); if (rnd(S) < 0.4) addPop(S, 1, ch); S.freeActs++; }
+      else { lines.push('A fun group activity!'); const others = shuffle(metKids(S).filter(n => n !== name && S.rel[n] > -10), mul(hash(S.seed + 'g' + S.di + name))).slice(0, 2); others.forEach(o => addRel(S, o, 1, ch, false, true)); if (rnd(S) < 0.4) addPop(S, 1, ch); S.freeActs++; }
       addRel(S, name, scale(g), ch); break;
     }
     case 'study': {
@@ -1519,7 +1560,7 @@ function checks(S) {
     o.ph_read = (S.phIgn || 0) >= 6 && lo10 >= 2;
     o.ph_line = F(S, 'REVEAL_DONE') > 0 && !!(S.meta && S.meta.clues >= 12) && (S.phoneN || 0) >= 100;
     o.ph_score = (S.pgN || 0) >= 100 && (S.pgPerf || 0) >= 40;
-    o.ph_face = (S.phoneN || 0) <= 25 && hang >= 20 && c40 >= 8; }
+    o.ph_face = (S.phoneN || 0) <= 25 && hang >= 20 && c40 >= 7; }
   o.e70 = !!S.ngp;
   o.unfinished = true;
   return o;
@@ -1598,7 +1639,7 @@ const phoneOf = S => (S.phone = S.phone || { th: {}, un: {}, last: {} });
 const OFF_WHY = ['You left your phone at home today.', 'Your battery died and there is no charger in sight.', 'Your phone is stuck on a software update.'];
 function phoneOff(S) { if (S.di < 2) return null; const h = hash(S.seed + 'phoff' + S.di); return h % 12 === 0 ? OFF_WHY[(h >>> 4) % 3] : null; }
 const CAP_MSG = 'You have texted enough for today. Your battery needs a break.';
-function phoneCan(S, name) { const c = CH[name]; return !!c && c.role !== 'teach'; }
+function phoneCan(S, name) { const c = CH[name]; return !!c && c.role !== 'teach' && isMet(S, name); }
 function phoneList(S, name) {
   if (!phoneCan(S, name)) return [];
   const off = phoneOff(S); if (off) return PHONE_ACTS.map(a => ({ id: a[0], n: a[3], ok: false, why: off }));
@@ -1742,7 +1783,7 @@ function phoneGame(S, id, score, max) {
   const ch = []; const lines = []; const ready = S.di - (S.pgLast[id] == null ? -99 : S.pgLast[id]) >= PG_GAP[id];
   const good = score >= Math.ceil(max * 0.8), mid = score >= Math.ceil(max * 0.4); let paid = false;
   if (ready) {
-    if (id === 'reply' && mid) { const who = shuffle(KIDS.concat(FAM).filter(n => S.rel[n] >= -5), mul(hash(S.seed + 'pg' + S.di)))[0]; if (who) { addRel(S, who, good ? 3 : 1, ch, false, true); paid = true; lines.push('Your replies landed well with ' + who.split(' ')[0] + '.'); } if (score === max && S.di - (S.pgPop == null ? -99 : S.pgPop) >= 5) { addPop(S, 1, ch); S.pgPop = S.di; paid = true; } }
+    if (id === 'reply' && mid) { const who = shuffle(KIDS.concat(FAM).filter(n => isMet(S, n) && S.rel[n] >= -5), mul(hash(S.seed + 'pg' + S.di)))[0]; if (who) { addRel(S, who, good ? 3 : 1, ch, false, true); paid = true; lines.push('Your replies landed well with ' + who.split(' ')[0] + '.'); } if (score === max && S.di - (S.pgPop == null ? -99 : S.pgPop) >= 5) { addPop(S, 1, ch); S.pgPop = S.di; paid = true; } }
     else if (id === 'who' && good) { addGrade(S, 1, ch); paid = true; lines.push('Paying attention to how people write helps you in class.'); }
     else if (id === 'emoji' && good) { addMoney(S, score === max ? 3 : 2, ch); paid = true; lines.push('A small prize from the quiz app.'); }
     else if (id === 'tap' && mid) { addMoney(S, good ? 2 : 1, ch); paid = true; lines.push('The game pays out a little.'); }
@@ -1755,7 +1796,7 @@ function phoneGame(S, id, score, max) {
 /* ---------- rumor lookup for UI ---------- */
 function rumorsFor(S, name) { return CH[name].rum.map((r, i) => ({ i, t: r[1], k: r[0], known: (S.heard[name] || []).includes(i) })); }
 
-const E = { D, CH, KIDS, FAM, TEACH, DAYS, DAYIDX, SHOP, JOBS, INTER, ENDINGS, ENDBY, RAND, SPECIAL, HOLIDAYS, BALL_DAY,
+const E = { isMet, metKids, metOf, itemLocked, phoneCan, applyFx, fxs, D, CH, KIDS, FAM, TEACH, DAYS, DAYIDX, SHOP, JOBS, INTER, ENDINGS, ENDBY, RAND, SPECIAL, HOLIDAYS, BALL_DAY,
   newGame, buildEvent, choose, endDay, study, work, buy, useItem, giveGift, giftItems, interactionList, interact, phoneList, phoneAct, phoneReply, phoneOf, PHONE_HIDE, PHONE_CAP, PH_MC, phoneOff, GROUPS, GC_ACTS, GC_SAY, GC_NICE, GC_FAM, phoneGroupList, phoneGroupAct, phoneGame, PG_GAP, relLabel, rumorsFor,
   BONDS, bond, bondOk, GIFTS, RECIPES, cook, cookLevel, cookPrice, recipeOk, THOUGHTS, noteStrange, mystStage, REVEAL_AT, npcActs, dayOf, ballScene, acadChance, quiz, hintsFor, checks, evaluateEnding, stats, hash, mul, F, ballChance, advance, rnd, fxs, likeScore };
 root.Engine = E;

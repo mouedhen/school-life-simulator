@@ -15,3 +15,4 @@ Run everything from the project root after `python3 build.py` (the UI tests read
 | `python3 tests/fr_miss.py` | Harvests every new event string from the engine and fails if any has no French translation. |
 
 Needs: Node 18+, Python 3, `pip install playwright` and a Chromium (`CHROMIUM=/path/to/chromium` if it is not the default).
+| `people_shop.py en|fr` | People tab: growing circle, new-contact banner, 4 sort orders, filter combo; shop: icons, locked/unlocked event items, buying; French |

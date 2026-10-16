@@ -5,7 +5,7 @@ import json, subprocess, sys, pathlib
 from ui_helpers import launch, URL, ADV
 from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-NEW = ['meta', 'follow', 'giftFrom', 'strange', 'noticed', 'note', 'th', 'recon', 'secretDone']
+NEW = ['meta', 'follow', 'giftFrom', 'strange', 'noticed', 'note', 'th', 'recon', 'secretDone', 'met', 'order', 'nextIntro', 'introDay', 'introWho']
 js = r'''
 require('./src/data.js'); const E=require('./src/engine.js'); const S=E.newGame(7); const rnd=E.mul(3);let g=0;
 while(!S.over&&S.phase!=='ending'&&S.di<60&&g++<4000){

@@ -59,6 +59,7 @@
     [/^Gave (.+) to (.+)$/, m => 'Offert à ' + frName(m[2]) + ' : ' + item(m[1])],
     [/^Inside: (.+)\.$/, m => 'Dedans : ' + item(m[1]) + '.'],
     [/^Worked: (.+)$/, m => 'Travaillé : ' + item(m[1])],
+    [/^I met (.+) today\. Maybe we will get along\.$/, m => "J'ai rencontré " + m[1] + " aujourd'hui. On s'entendra peut-être bien."],
     [/^I treated myself and bought (.+)\.$/, m => 'Je me suis fait plaisir : ' + low(item(m[1])) + '.'],
     [/^I used my (.+)\.$/, m => "J'ai utilisé : " + low(item(m[1])) + '.'],
     [/^I gave (.+?) an? (.+)\. I hope they liked it\.$/, m => "J'ai offert à " + frName(m[1]) + ' : ' + low(item(m[2])) + ". J'espère que ça a plu."],
