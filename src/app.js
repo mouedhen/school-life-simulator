@@ -6,7 +6,7 @@
  * to clicks. Never call engine functions "just to look": many of them advance the seeded RNG.
  *
  * How a click works: every button carries data-act="<action>" (and often data-v="<value>").
- * onClick() (section "click actions" near the end of the file) dispatches on the action, then the handler
+ * onClick() looks the action up in the ACTIONS table (section "click actions", near the end), runs it, then the handler
  * calls render() (the page behind) and/or renderModal() (the overlay).
  *
  * Two state objects:
@@ -55,7 +55,7 @@
  *   run summary & note ..... summary text for testers, note for MC
  *   settings & help ........ showSettings, showHelp
  *   game start & people .... startNew, beginGame, doInter
- *   click actions .......... onClick
+ *   click actions .......... ACTIONS table (grouped by area) and onClick
  *   keyboard ............... onKey
  *   boot ................... event listeners, prefs loading, first render
  */
@@ -1482,103 +1482,229 @@ function doInter(name, id, arg) {
 function renderBehind() { render(); }
 
 /* ---------- click actions ---------- */
+/* Every clickable element has data-act="<name>" and often data-v="<value>". onClick() finds the action
+   in ACTIONS and calls it as handler(v, b, a): v = data-v (a string or undefined), b = the clicked element,
+   a = the action name (lets one handler serve two names, e.g. saves / saves0).
+   Rules kept from the old switch:
+   - every click plays SFX.tap() first, except 'pick' and 'inter' (their result plays its own sound);
+   - an unknown action does nothing (after the tap);
+   - a handler that only calls an async function does not return its promise (braces), as before;
+     handlers that awaited before are async and are awaited by onClick. */
+
+/* navigation: tabs, People list, calendar month */
+const NAV_ACTIONS = {
+  tab: v => {
+    V.tab = v;
+    if (v === 'journal') V.jS = null;
+    if (v === 'cal') {
+      const cur = E.dayOf(S).d;
+      V.calM = Math.max(0, MONTHS.findIndex(([y, m]) => cur.startsWith(`${y}-${String(m + 1).padStart(2, '0')}`)));
+    }
+    closeModal(); render(); window.scrollTo(0, 0);
+  },
+  filter: v => { V.filter = v; render(); },
+  sort: v => { V.sort = v; render(); },
+  calm: v => { V.calM = +v; render(); },
+  close: () => {
+    Voice.stop();
+    if (V.tut != null) { endTut(); return; }
+    closeModal(); if (S) render();
+  },
+};
+
+/* title screen, menu and dialogs */
+const MENU_ACTIONS = {
+  enter: () => { V.gate = false; render(); },
+  settings: () => showSettings(),
+  help: () => showHelp(),
+  stats: () => { showStats(); },
+  endbook: () => { showEndBook(); },
+  summary: () => { showSummary(); },
+  copysum: () => { copySummary(); },
+  notemc: () => { showNoteMC(); },
+  savenote: () => { saveNote(false); },
+  clearnote: () => { saveNote(true); },
+  theme: async () => {
+    THEME = ({ system: 'light', light: 'dark', dark: 'system' })[THEME]; applyTheme();
+    { const p = await Store.prefs(); Store.prefs(Object.assign({}, p, { theme: THEME })); }
+    render(); renderModal();
+  },
+  lang: async () => {
+    LANG = LANG === 'fr' ? 'en' : 'fr';
+    { const p = await Store.prefs(); Store.prefs(Object.assign({}, p, { lang: LANG })); }
+    render(); renderModal();
+  },
+};
+
+/* settings toggles, sound and voice */
+const SETTINGS_ACTIONS = {
+  mute: () => {
+    PREF.muted = !PREF.muted;
+    if (PREF.muted) { Music.stop(); Voice.stop(); } else { Music.start(); SFX.tap(); }
+    savePrefs(); render();
+  },
+  fs: v => { PREF.fs = +v; applyA11y(); savePrefs(); renderModal(); },
+  ink: () => { PREF.ink = !PREF.ink; applyA11y(); savePrefs(); renderModal(); },
+  rm: () => { PREF.rm = !RM_ON(); applyA11y(); savePrefs(); renderModal(); },
+  snd: () => { PREF.snd = !PREF.snd; savePrefs(); renderModal(); if (PREF.snd) SFX.chime(); },
+  mus: () => { PREF.mus = !PREF.mus; savePrefs(); if (PREF.mus) Music.start(); else Music.stop(); renderModal(); },
+  voice: () => { PREF.voice = !PREF.voice; if (!PREF.voice) Voice.stop(); savePrefs(); renderModal(); },
+  listen: () => {
+    if (V.speaking) { Voice.stop(); }
+    else if (S && S.ending && !V.evCur) Voice.say(endParts());
+    else if (V.evCur) Voice.say(V.res ? resParts(V.evCur, V.res) : evParts(V.evCur));
+  },
+};
+
+/* tutorial, new game, saved games */
+const GAME_ACTIONS = {
+  tutnext: () => { V.tut++; if (V.tut >= TUT().length) endTut(); else renderModal(); },
+  tutprev: () => { V.tut = Math.max(0, V.tut - 1); renderModal(); },
+  tutskip: () => { endTut(); },
+  tutopen: () => startTut(false),
+  start: () => { startNew(); },
+  newgame2: () => { startNew(); },
+  begin: () => { beginGame(); },
+  trait: v => {
+    V.trait = v;
+    document.querySelectorAll('#ov [data-act=trait]').forEach(x => { const on = x.dataset.v === v; x.classList.toggle('primary', on); x.setAttribute('aria-pressed', on); });
+  },
+  ngp: (v, b) => { V.ngpOn = !V.ngpOn; b.classList.toggle('primary', V.ngpOn); b.setAttribute('aria-pressed', V.ngpOn); },
+  newgame: () => openModal(head(t('New game'), '') + `<p>${LANG === 'fr' ? 'Recommencer ? Ta partie actuelle reste dans la sauvegarde auto jusqu\'à ce qu\'elle soit remplacée.' : 'Start over? Your current run stays in autosave until the new one replaces it.'}</p><div class="row"><button class="btn primary" data-act="start">${t('New game')}</button><button class="btn ghost" data-act="close">${t('Close')}</button></div>`),
+  saves: (v, b, a) => { showSaves(a === 'saves0'); },
+  saves0: (v, b, a) => { showSaves(a === 'saves0'); },
+  continue: async () => {
+    const x = await Store.get('auto');
+    if (x) { S = x.S; V.overDone = false; V.tab = 'today'; render(); if (S.phase === 'event' && !S.over) showEvent(); }
+  },
+  saveto: async v => { await Store.put(v, S); toast(t('Saved.')); showSaves(false); },
+  loadfrom: async v => {
+    const x = await Store.get(v);
+    if (x) { S = x.S; V.overDone = false; V.tab = 'today'; closeModal(); render(); toast(t('Loaded.')); if (S.phase === 'event' && !S.over) showEvent(); }
+  },
+  delslot: async v => { await Store.del(v); showSaves(!S); },
+};
+
+/* school events, gifts inside events, school minigames */
+const EVENT_ACTIONS = {
+  openev: () => showEvent(),
+  pick: v => {
+    const ev = V.evCur; const c = ev.choices[+v];
+    if (c.disabled) { toast(c.why || ''); return; }
+    if (c.gift) { V.sub = { type: 'gift' }; V.evPick = +v; renderModal(); return; }
+    if (c.sp === 'academic') { V.evPick = +v; V.mg = newMg(ev); renderModal(); return; }
+    V.res = E.choose(S, +v); V.res && (V.res.title = ev.title); render(); renderModal();
+  },
+  mgans: v => { const m = V.mg; if (m.ans == null) { m.ans = v; if (v === m.def.qs[m.i].a) m.ok++; } renderModal(); },
+  mghint: () => {
+    const m = V.mg;
+    if (m.hints > 0 && m.ans == null) { const q = m.def.qs[m.i]; m.rem = q.o.filter(o => o !== q.a).slice(0, 2); m.hints--; }
+    renderModal();
+  },
+  mgnext: () => { const m = V.mg; m.i++; m.ans = null; m.rem = []; if (m.i >= m.def.qs.length) m.done = true; renderModal(); },
+  mgflip: v => mgFlip(+v),
+  mgfinish: () => {
+    const m = V.mg; let q, label;
+    if (m.def.type === 'quiz') { q = m.ok / m.def.qs.length; label = m.def.label + ' ' + m.ok + '/' + m.def.qs.length; }
+    else { q = m.misses <= 4 ? 1 : m.misses <= 7 ? 0.7 : 0.3; label = m.def.label + ' (' + m.misses + ' misses)'; }
+    V.mg = null; V.res = E.choose(S, V.evPick, { mg: { q, label } }); render(); renderModal();
+  },
+  mgskip: () => { V.mg = null; V.res = E.choose(S, V.evPick); render(); renderModal(); },
+  evgift: v => { V.res = E.choose(S, V.evPick, v); V.sub = null; render(); renderModal(); },
+  evback: () => { V.sub = null; renderModal(); },
+  evnext: () => { Voice.stop(); V.evCur = null; afterEvent(); },
+};
+
+/* after school: study, end the day, shop, jobs, kitchen and family time */
+const DAY_ACTIONS = {
+  study: () => {
+    const r = E.study(S);
+    if (r && r.err) toast(r.err);
+    else { V.res = null; Store.autosave(S); render(); toast(LANG === 'fr' ? 'Tu as étudié. +10% au prochain test.' : 'Studied. +10% on your next check.'); }
+  },
+  endday: () => {
+    const r = E.endDay(S); Store.autosave(S);
+    if (S.phase === 'ending') { markEnding(); }
+    render(); if (S.phase === 'event' && !S.over) showEvent();
+  },
+  buy: v => {
+    const r = E.buy(S, +v);
+    if (r && r.err) toast(r.err); else { Store.autosave(S); toast((LANG === 'fr' ? 'Acheté : ' : 'Bought: ') + tr(E.SHOP[+v].n)); }
+    render();
+  },
+  use: v => { const r = E.useItem(S, v); if (r.err) toast(r.err); else toast((r.lines || [])[0] || 'Done'); Store.autosave(S); render(); },
+  work: v => {
+    const r = E.work(S, +v);
+    if (r && r.err) toast(r.err); else { toast('+ $' + (r.chips.find(c => c.k === 'money') || { v: 0 }).v); Store.autosave(S); }
+    render();
+  },
+  cook: v => showCook(v),
+  bond: v => showBond(v),
+  bondfor: (v, b) => {
+    if (b.classList.contains('dis')) { toast(L('Not available right now.', 'Pas disponible pour le moment.')); return; }
+    const [who, aid] = String(v).split('|'); const r = E.bond(S, who, aid);
+    if (!r) return;
+    if (r.err) { toast(r.err); return; }
+    const ac = E.BONDS[who].acts.find(x => x.id === aid); Store.autosave(S);
+    openModal(head(who, '') + `<p class="desc">${esc(tr(ac.n))}</p>${chips(r.chips)}<div class="lines">${r.lines.map(l => `<p>${esc(tr(l))}</p>`).join('')}</div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="close">OK</button></div>`);
+    render();
+  },
+  cookfor: v => {
+    const [rid, who] = String(v).split('|'); const r = E.cook(S, rid, who);
+    if (!r) return;
+    if (r.err) { toast(r.err); return; }
+    const rc = E.RECIPES.find(x => x.id === rid); const wl = who === 'self' ? L('yourself', 'toi-même') : who === 'family' ? L('your family', 'ta famille') : who; Store.autosave(S);
+    openModal(head(L('Cooked ', 'Cuisiné : ') + tr(rc.n), '') + `<p class="desc">${L('You cooked for ', 'Tu as cuisiné pour ')}${esc(wl)}.</p>${chips(r.chips)}<div class="lines">${r.lines.map(l => `<p>${esc(tr(l))}</p>`).join('')}</div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="close">OK</button></div>`);
+    render();
+  },
+};
+
+/* person profile: interactions and their sub-menus */
+const PEOPLE_ACTIONS = {
+  person: v => showPerson(v),
+  presback: () => { V.res = null; V.sub = null; if (S.over) { closeModal(); render(); } else renderModal(); },
+  subback: () => { V.sub = null; renderModal(); },
+  aboutpick: v => { V.sub.subject = v; renderModal(); },
+  inter: (v, b) => {
+    if (b.dataset.why) { toast(b.dataset.why); return; }
+    const name = V.person; const types = { talkabout: 'about', talk: 'talk', gift: 'gift', hangout: 'hangout', lend: 'lend', share: 'rumor', investigate: 'rumor', fight: 'fight', apologize: 'apologize' };
+    if (types[v]) { V.sub = { type: types[v], id: v }; renderModal(); } else doInter(name, v);
+  },
+  go: v => { const s = V.sub; doInter(V.person, s.id, v); },
+};
+
+/* phone: threads, group chats, phone minigames */
+const PHONE_ACTIONS = {
+  phone: () => showPhone(),
+  phtext: v => showPhone(v),
+  phopen: v => { pgStop(); V.ph = { name: v }; renderModal(); phScroll(); },
+  phback: () => { pgStop(); V.pg = null; V.ph = { name: null }; renderModal(); render(); },
+  phgames: () => { pgStop(); V.pg = null; V.ph = { name: '@games' }; renderModal(); },
+  pgstart: (v, b) => { if (b.dataset.why) { toast(b.dataset.why); return; } pgStart(v); },
+  pgans: v => pgAnswer(+v),
+  phgact: (v, b) => { if (b.dataset.why) { toast(b.dataset.why); return; } const r = E.phoneGroupAct(S, V.ph.name, v); phDone(r); renderModal(); phScroll(); },
+  phact: (v, b) => { if (b.dataset.why) { toast(b.dataset.why); return; } const r = E.phoneAct(S, V.ph.name, v); phDone(r); renderModal(); phScroll(); },
+  phreply: v => { const r = E.phoneReply(S, V.ph.name, +v); phDone(r); renderModal(); phScroll(); },
+};
+
+/* journal book */
+const JOURNAL_ACTIONS = {
+  jopen: () => jOpen(),
+  jnext: () => jFlip(1),
+  jprev: () => jFlip(-1),
+  jtoday: () => jFlip(0, curSpread()),
+  readj: () => { V.jFinal = true; V.jS = null; render(); },
+  jclose: () => jClose(),
+};
+
+const ACTIONS = Object.assign({}, NAV_ACTIONS, MENU_ACTIONS, SETTINGS_ACTIONS, GAME_ACTIONS, EVENT_ACTIONS, DAY_ACTIONS, PEOPLE_ACTIONS, PHONE_ACTIONS, JOURNAL_ACTIONS);
+const NO_TAP = new Set(['pick', 'inter']);
+
 async function onClick(e) {
   const b = e.target.closest('[data-act]'); if (!b) { if (e.target.id === 'ov' && V.modal && !V.evCur) closeModal(); return; }
   const a = b.dataset.act, v = b.dataset.v;
-  if (a !== 'pick' && a !== 'inter') SFX.tap();
-  switch (a) {
-    case 'settings': showSettings(); break;
-    case 'phone': showPhone(); break;
-    case 'phtext': showPhone(v); break;
-    case 'phopen': pgStop(); V.ph = { name: v }; renderModal(); phScroll(); break;
-    case 'phback': pgStop(); V.pg = null; V.ph = { name: null }; renderModal(); render(); break;
-    case 'phgames': pgStop(); V.pg = null; V.ph = { name: '@games' }; renderModal(); break;
-    case 'pgstart': if (b.dataset.why) { toast(b.dataset.why); break; } pgStart(v); break;
-    case 'pgans': pgAnswer(+v); break;
-    case 'phgact': { if (b.dataset.why) { toast(b.dataset.why); break; } const r = E.phoneGroupAct(S, V.ph.name, v); phDone(r); renderModal(); phScroll(); break; }
-    case 'phact': { if (b.dataset.why) { toast(b.dataset.why); break; } const r = E.phoneAct(S, V.ph.name, v); phDone(r); renderModal(); phScroll(); break; }
-    case 'phreply': { const r = E.phoneReply(S, V.ph.name, +v); phDone(r); renderModal(); phScroll(); break; }
-    case 'summary': showSummary(); break;
-    case 'copysum': copySummary(); break;
-    case 'notemc': showNoteMC(); break;
-    case 'savenote': saveNote(false); break;
-    case 'clearnote': saveNote(true); break;
-    case 'mute': PREF.muted = !PREF.muted; if (PREF.muted) { Music.stop(); Voice.stop(); } else { Music.start(); SFX.tap(); } savePrefs(); render(); break;
-    case 'stats': showStats(); break;
-    case 'tutnext': V.tut++; if (V.tut >= TUT().length) endTut(); else renderModal(); break;
-    case 'tutprev': V.tut = Math.max(0, V.tut - 1); renderModal(); break;
-    case 'tutskip': endTut(); break;
-    case 'tutopen': startTut(false); break;
-    case 'trait': V.trait = v; document.querySelectorAll('#ov [data-act=trait]').forEach(x => { const on = x.dataset.v === v; x.classList.toggle('primary', on); x.setAttribute('aria-pressed', on); }); break;
-    case 'ngp': V.ngpOn = !V.ngpOn; b.classList.toggle('primary', V.ngpOn); b.setAttribute('aria-pressed', V.ngpOn); break;
-    case 'fs': PREF.fs = +v; applyA11y(); savePrefs(); renderModal(); break;
-    case 'ink': PREF.ink = !PREF.ink; applyA11y(); savePrefs(); renderModal(); break;
-    case 'rm': PREF.rm = !RM_ON(); applyA11y(); savePrefs(); renderModal(); break;
-    case 'snd': PREF.snd = !PREF.snd; savePrefs(); renderModal(); if (PREF.snd) SFX.chime(); break;
-    case 'mus': PREF.mus = !PREF.mus; savePrefs(); if (PREF.mus) Music.start(); else Music.stop(); renderModal(); break;
-    case 'voice': PREF.voice = !PREF.voice; if (!PREF.voice) Voice.stop(); savePrefs(); renderModal(); break;
-    case 'listen': if (V.speaking) { Voice.stop(); } else if (S && S.ending && !V.evCur) Voice.say(endParts()); else if (V.evCur) Voice.say(V.res ? resParts(V.evCur, V.res) : evParts(V.evCur)); break;
-    case 'jopen': jOpen(); break;
-    case 'jnext': jFlip(1); break;
-    case 'jprev': jFlip(-1); break;
-    case 'jtoday': jFlip(0, curSpread()); break;
-    case 'readj': V.jFinal = true; V.jS = null; render(); break;
-    case 'jclose': jClose(); break;
-    case 'tab': V.tab = v; if (v === 'journal') V.jS = null; if (v === 'cal') { const cur = E.dayOf(S).d; V.calM = Math.max(0, MONTHS.findIndex(([y, m]) => cur.startsWith(`${y}-${String(m + 1).padStart(2, '0')}`))); } closeModal(); render(); window.scrollTo(0, 0); break;
-    case 'filter': V.filter = v; render(); break;
-    case 'sort': V.sort = v; render(); break;
-    case 'calm': V.calM = +v; render(); break;
-    case 'openev': showEvent(); break;
-    case 'close': Voice.stop(); if (V.tut != null) { endTut(); break; } closeModal(); if (S) render(); break;
-    case 'pick': {
-      const ev = V.evCur; const c = ev.choices[+v]; if (c.disabled) { toast(c.why || ''); break; }
-      if (c.gift) { V.sub = { type: 'gift' }; V.evPick = +v; renderModal(); break; }
-      if (c.sp === 'academic') { V.evPick = +v; V.mg = newMg(ev); renderModal(); break; }
-      V.res = E.choose(S, +v); V.res && (V.res.title = ev.title); render(); renderModal(); break;
-    }
-    case 'mgans': { const m = V.mg; if (m.ans == null) { m.ans = v; if (v === m.def.qs[m.i].a) m.ok++; } renderModal(); break; }
-    case 'mghint': { const m = V.mg; if (m.hints > 0 && m.ans == null) { const q = m.def.qs[m.i]; m.rem = q.o.filter(o => o !== q.a).slice(0, 2); m.hints--; } renderModal(); break; }
-    case 'mgnext': { const m = V.mg; m.i++; m.ans = null; m.rem = []; if (m.i >= m.def.qs.length) m.done = true; renderModal(); break; }
-    case 'mgflip': mgFlip(+v); break;
-    case 'mgfinish': { const m = V.mg; let q, label; if (m.def.type === 'quiz') { q = m.ok / m.def.qs.length; label = m.def.label + ' ' + m.ok + '/' + m.def.qs.length; } else { q = m.misses <= 4 ? 1 : m.misses <= 7 ? 0.7 : 0.3; label = m.def.label + ' (' + m.misses + ' misses)'; } V.mg = null; V.res = E.choose(S, V.evPick, { mg: { q, label } }); render(); renderModal(); break; }
-    case 'mgskip': { V.mg = null; V.res = E.choose(S, V.evPick); render(); renderModal(); break; }
-    case 'evgift': V.res = E.choose(S, V.evPick, v); V.sub = null; render(); renderModal(); break;
-    case 'evback': V.sub = null; renderModal(); break;
-    case 'evnext': Voice.stop(); V.evCur = null; afterEvent(); break;
-    case 'study': { const r = E.study(S); if (r && r.err) toast(r.err); else { V.res = null; Store.autosave(S); render(); toast(LANG === 'fr' ? 'Tu as étudié. +10% au prochain test.' : 'Studied. +10% on your next check.'); } break; }
-    case 'endday': { const r = E.endDay(S); Store.autosave(S); if (S.phase === 'ending') { markEnding(); } render(); if (S.phase === 'event' && !S.over) showEvent(); break; }
-    case 'buy': { const r = E.buy(S, +v); if (r && r.err) toast(r.err); else { Store.autosave(S); toast((LANG === 'fr' ? 'Acheté : ' : 'Bought: ') + tr(E.SHOP[+v].n)); } render(); break; }
-    case 'use': { const r = E.useItem(S, v); if (r.err) toast(r.err); else toast((r.lines || [])[0] || 'Done'); Store.autosave(S); render(); break; }
-    case 'cook': showCook(v); break;
-    case 'bond': showBond(v); break;
-    case 'bondfor': { if (b.classList.contains('dis')) { toast(L('Not available right now.', 'Pas disponible pour le moment.')); break; } const [who, aid] = String(v).split('|'); const r = E.bond(S, who, aid); if (!r) break; if (r.err) { toast(r.err); break; } const ac = E.BONDS[who].acts.find(x => x.id === aid); Store.autosave(S); openModal(head(who, '') + `<p class="desc">${esc(tr(ac.n))}</p>${chips(r.chips)}<div class="lines">${r.lines.map(l => `<p>${esc(tr(l))}</p>`).join('')}</div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="close">OK</button></div>`); render(); break; }
-    case 'cookfor': { const [rid, who] = String(v).split('|'); const r = E.cook(S, rid, who); if (!r) break; if (r.err) { toast(r.err); break; } const rc = E.RECIPES.find(x => x.id === rid); const wl = who === 'self' ? L('yourself', 'toi-même') : who === 'family' ? L('your family', 'ta famille') : who; Store.autosave(S); openModal(head(L('Cooked ', 'Cuisiné : ') + tr(rc.n), '') + `<p class="desc">${L('You cooked for ', 'Tu as cuisiné pour ')}${esc(wl)}.</p>${chips(r.chips)}<div class="lines">${r.lines.map(l => `<p>${esc(tr(l))}</p>`).join('')}</div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="close">OK</button></div>`); render(); break; }
-    case 'work': { const r = E.work(S, +v); if (r && r.err) toast(r.err); else { toast('+ $' + (r.chips.find(c => c.k === 'money') || { v: 0 }).v); Store.autosave(S); } render(); break; }
-    case 'person': showPerson(v); break;
-    case 'presback': V.res = null; V.sub = null; if (S.over) { closeModal(); render(); } else renderModal(); break;
-    case 'subback': V.sub = null; renderModal(); break;
-    case 'aboutpick': V.sub.subject = v; renderModal(); break;
-    case 'inter': {
-      if (b.dataset.why) { toast(b.dataset.why); break; }
-      const name = V.person; const types = { talkabout: 'about', talk: 'talk', gift: 'gift', hangout: 'hangout', lend: 'lend', share: 'rumor', investigate: 'rumor', fight: 'fight', apologize: 'apologize' };
-      if (types[v]) { V.sub = { type: types[v], id: v }; renderModal(); } else doInter(name, v);
-      break;
-    }
-    case 'go': { const s = V.sub; doInter(V.person, s.id, v); break; }
-    case 'theme': THEME = ({ system: 'light', light: 'dark', dark: 'system' })[THEME]; applyTheme(); { const p = await Store.prefs(); Store.prefs(Object.assign({}, p, { theme: THEME })); } render(); renderModal(); break;
-    case 'lang': LANG = LANG === 'fr' ? 'en' : 'fr'; { const p = await Store.prefs(); Store.prefs(Object.assign({}, p, { lang: LANG })); } render(); renderModal(); break;
-    case 'saves': case 'saves0': showSaves(a === 'saves0'); break;
-    case 'endbook': showEndBook(); break;
-    case 'help': showHelp(); break;
-    case 'enter': V.gate = false; render(); break;
-    case 'start': case 'newgame2': startNew(); break;
-    case 'begin': beginGame(); break;
-    case 'newgame': openModal(head(t('New game'), '') + `<p>${LANG === 'fr' ? 'Recommencer ? Ta partie actuelle reste dans la sauvegarde auto jusqu\'à ce qu\'elle soit remplacée.' : 'Start over? Your current run stays in autosave until the new one replaces it.'}</p><div class="row"><button class="btn primary" data-act="start">${t('New game')}</button><button class="btn ghost" data-act="close">${t('Close')}</button></div>`); break;
-    case 'continue': { const x = await Store.get('auto'); if (x) { S = x.S; V.overDone = false; V.tab = 'today'; render(); if (S.phase === 'event' && !S.over) showEvent(); } break; }
-    case 'saveto': { await Store.put(v, S); toast(t('Saved.')); showSaves(false); break; }
-    case 'loadfrom': { const x = await Store.get(v); if (x) { S = x.S; V.overDone = false; V.tab = 'today'; closeModal(); render(); toast(t('Loaded.')); if (S.phase === 'event' && !S.over) showEvent(); } break; }
-    case 'delslot': await Store.del(v); showSaves(!S); break;
-  }
+  if (!NO_TAP.has(a)) SFX.tap();
+  if (Object.prototype.hasOwnProperty.call(ACTIONS, a)) await ACTIONS[a](v, b, a);
 }
 
 /* ---------- keyboard ---------- */
