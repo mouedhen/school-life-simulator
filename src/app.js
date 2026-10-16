@@ -972,38 +972,86 @@ const Store = {
      prefs mirror .. clues (faint ink found), revealed, seen (endings seen), prefName
      new game ...... trait, ngpOn (New Game+ bonus), tut / tutFirst (tutorial step), overDone (game over recorded)
      dialogs ....... sumTxt (run summary), noteVal (note for MC) */
-let S = null; const V = { tab: 'today', modal: null, filter: 'all', sort: 'def', q: '', calM: 0, res: null, evIdx: null, sub: null, seen: [] }; window.__V = V; window.__S = () => S;
+let S = null;
+const V = {
+  tab: 'today',
+  modal: null,
+  filter: 'all',
+  sort: 'def',
+  q: '',
+  calM: 0,
+  res: null,
+  evIdx: null,
+  sub: null,
+  seen: [],
+};
+window.__V = V;
+window.__S = () => S;
 
 /* result chips (POP +2, Grade −1, ★ flag...) and the toast message */
-function pretty(f) { return String(f).toLowerCase().replace(/_/g, ' '); }
+function pretty(f) {
+  return String(f).toLowerCase().replace(/_/g, ' ');
+}
 function chipHtml(c) {
   switch (c.k) {
-    case 'pop': return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">POP ${signed(c.v)}</span>`;
-    case 'grade': return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">${t('Grade')} ${signed(c.v)}</span>`;
-    case 'money': return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">$${c.v > 0 ? '+' : '−'}${Math.abs(c.v)}</span>`;
-    case 'rel': return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">${esc(c.n.split(' ')[0] === 'Ms.' || c.n.split(' ')[0] === 'Mr.' ? c.n : c.n.split(' ')[0])} ${signed(c.v)}</span>`;
-    case 'ripple': return `<span class="chip rip">${esc(c.n.split(' ')[0])} ${signed(c.v)}</span>`;
-    case 'gossip': return `<span class="chip down">Gossip +${c.v}</span>`;
-    case 'flag': return `<span class="chip flag">★ ${esc(pretty(c.n))}</span>`;
-    case 'unlock': return `<span class="chip flag">🔓 ${L('Shop', 'Boutique')}: ${esc(tr(c.n))}</span>`;
+    case 'pop':
+      return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">POP ${signed(c.v)}</span>`;
+    case 'grade':
+      return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">${t('Grade')} ${signed(c.v)}</span>`;
+    case 'money':
+      return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">$${c.v > 0 ? '+' : '−'}${Math.abs(c.v)}</span>`;
+    case 'rel':
+      return (
+        `<span class="chip ${c.v > 0 ? 'up' : 'down'}">` +
+        esc(c.n.split(' ')[0] === 'Ms.' || c.n.split(' ')[0] === 'Mr.' ? c.n : c.n.split(' ')[0]) +
+        ` ${signed(c.v)}</span>`
+      );
+    case 'ripple':
+      return `<span class="chip rip">${esc(c.n.split(' ')[0])} ${signed(c.v)}</span>`;
+    case 'gossip':
+      return `<span class="chip down">Gossip +${c.v}</span>`;
+    case 'flag':
+      return `<span class="chip flag">★ ${esc(pretty(c.n))}</span>`;
+    case 'unlock':
+      return `<span class="chip flag">🔓 ${L('Shop', 'Boutique')}: ${esc(tr(c.n))}</span>`;
   }
   return '';
 }
 function chips(arr, max) {
   if (!arr || !arr.length) return '';
-  const main = arr.filter(c => c.k !== 'ripple'); const rip = arr.filter(c => c.k === 'ripple').slice(0, 3);
-  return `<div class="chips">${main.concat(max ? [] : rip).map(chipHtml).join('')}</div>`;
+  const main = arr.filter(c => c.k !== 'ripple');
+  const rip = arr.filter(c => c.k === 'ripple').slice(0, 3);
+  return `<div class="chips">${main
+    .concat(max ? [] : rip)
+    .map(chipHtml)
+    .join('')}</div>`;
 }
 /* small pieces of UI used on several screens */
 const signed = v => (v > 0 ? '+' : '') + v; // "+5", "0", "-3"
-const statBoxes = () => `<div class="stats3"><div><b>${S.pop}</b>POP</div><div><b>${S.grade}</b>${t('Grade')}</div><div><b>$${S.money}</b>${t('Money')}</div></div>`;
+const statBoxes = () =>
+  `<div class="stats3"><div><b>${S.pop}</b>POP</div><div><b>${S.grade}</b>${t('Grade')}</div><div>` +
+  `<b>$${S.money}</b>${t('Money')}</div></div>`;
 const themeBtn = cls => `<button class="${cls}" data-act="theme">Mode: ${THEME_L()}</button>`;
 const langBtn = cls => `<button class="${cls}" data-act="lang">${t('Language')}: ${L('English', 'Français')}</button>`;
-const noteMcBtn = () => V.revealed ? `<button class="btn" data-act="notemc">${L('Note for MC', 'Mot pour MC')}</button>` : '';
-const closeRow = () => `<div class="row" style="margin-top:12px"><button class="btn ghost" data-act="close">${t('Close')}</button></div>`;
+const noteMcBtn = () =>
+  V.revealed ? `<button class="btn" data-act="notemc">${L('Note for MC', 'Mot pour MC')}</button>` : '';
+const closeRow = () =>
+  `<div class="row" style="margin-top:12px"><button class="btn ghost" data-act="close">${t('Close')}` +
+  `</button></div>`;
 // lines + chips of an action's result, with an OK button (family time, cooking)
-const outcomeHtml = r => `${chips(r.chips)}<div class="lines">${r.lines.map(l => `<p>${esc(tr(l))}</p>`).join('')}</div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="close">OK</button></div>`;
-function toast(msg) { const d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = tr(msg); document.body.appendChild(d); setTimeout(() => d.remove(), 2200); }
+const outcomeHtml = r =>
+  `${chips(r.chips)}<div class="lines">` +
+  r.lines.map(l => `<p>${esc(tr(l))}</p>`).join('') +
+  `</div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="close">OK` +
+  `</button></div>`;
+function toast(msg) {
+  const d = document.createElement('div');
+  d.className = 'toast';
+  d.setAttribute('role', 'status');
+  d.textContent = tr(msg);
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 2200);
+}
 
 /* ---------- render shell ---------- */
 function fmtDate(iso) { const d = new Date(iso + 'T12:00:00Z'); return d.toLocaleDateString(L('en-CA', 'fr-CA'), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); }
