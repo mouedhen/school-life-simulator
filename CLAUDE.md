@@ -14,7 +14,7 @@ Outillage : Node ≥ 22 uniquement (`npm install` une fois, puis `npx playwright
 - `npm run build` : assemble `src/*` en `dist/index.html` (~1 Mo). Ouvrir ce fichier dans un navigateur pour jouer. `npm run build:check` vérifie qu'il est à jour (CI).
 - `npm run fr` : fusionne `tr/out_*.json` dans `src/fr.js` (fichiers lus par ordre alphabétique : une clé en double est écrasée par le fichier suivant). À relancer après toute modification des traductions, puis `npm run build`. `npm run fr:check` en CI.
 - `npm test` (tests unitaires + golden master), `npm run test:e2e` (navigateur), `npm run lint` (ESLint + noms non définis/inutilisés entre les morceaux, `scripts/lint-bundles.mjs`), `npm run format`.
-- **Déploiement** : `.github/workflows/pages.yml` publie `dist/` sur GitHub Pages à chaque push sur `main`/`master`. Il faut reconstruire et committer `dist/index.html`. Vérification du site en ligne : `SLS_URL=<url> python tests/live_check.py en|fr`.
+- **Branches et déploiement** : `develop` est la branche stable où l'on ajoute les fonctionnalités ; `refactor` contient la refactorisation en pause (agents : audit, tests unitaires, migration e2e). `.github/workflows/ci.yml` vérifie chaque push (lint et format non bloquants pour l'instant, fichiers générés à jour, `npm test`, puis `npm run test:e2e` = tests navigateur Python via `scripts/e2e.mjs`, 1 relance par test) et **déploie `develop` sur GitHub Pages** (https://mouedhen.github.io/school-life-simulator/) si tout passe. Il faut reconstruire et committer `dist/index.html` (`npm run build:check` en CI). Attention : `master` contient encore l'ancien `pages.yml` ; un push sur `master` republierait `master`. Vérification du site en ligne : `SLS_URL=<url> python tests/live_check.py en|fr`.
 
 ## Architecture
 
