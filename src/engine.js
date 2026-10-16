@@ -633,6 +633,8 @@ function addRel(S, name, v, ch, quiet, noRipple) {
   return real;
 }
 function knownRank(S, kids) { return kids.slice().sort((a, b) => S.rel[b] - S.rel[a]); }
+// the known classmate you get on with worst
+function lowestKid(S) { return metKids(S).slice().sort((a, b) => S.rel[a] - S.rel[b])[0]; }
 
 /* ---------- day context ---------- */
 function makeCtx(S, key, subject) {
@@ -678,7 +680,7 @@ function resolve(S, ctx, who) {
     case 'TM1': return [ctx.TM[0]]; case 'TM': return ctx.TM; case 'G': return ctx.G;
     case 'TEACH': return [ctx.teacher];
     case 'DATE': return [S.ballDate || knownRank(S, metKids(S))[0]];
-    case 'RIVAL': { const lo = metKids(S).slice().sort((a, b) => S.rel[a] - S.rel[b])[0]; return [S.rel[lo] < 0 ? lo : ctx.T]; }
+    case 'RIVAL': { const lo = lowestKid(S); return [S.rel[lo] < 0 ? lo : ctx.T]; }
     case 'TOP': { const t = knownRank(S, metKids(S)).filter(n => S.rel[n] > 0).slice(0, 3); return t.length ? t : ctx.G; }
   }
   return [ctx.C];
@@ -695,7 +697,7 @@ function applyFx(S, list, ctx, ch, opt) {
       case 'grade': addGrade(S, f.v > 0 ? pround(S, f.v * 0.6) : f.v, ch); break;
       case 'money': addMoney(S, f.v, ch); break;
       case 'flag': setFlag(S, f.f); if (!/^(PEDAGO)/.test(f.f)) ch.push({ k: 'flag', n: f.f }); if (F(S, f.f) === 1) SHOP.forEach(it => { if (it.flag === f.f) ch.push({ k: 'unlock', n: it.n }); }); break;
-      case 'gossip': S.gossip += f.v; setFlag(S, 'GOSSIP'); ch.push({ k: 'gossip', v: f.v }); break;
+      case 'gossip': addGossip(S, f.v, ch); break;
       case 'rel': resolve(S, ctx, f.who).forEach(n => { addRel(S, n, f.v, ch); S.last[n] = S.di; }); break;
       case 'spill': { const t = lastRelTarget(ch); if (t) (LINKS[t] || []).slice(0, 2).forEach(([o]) => { if (CH[o].role === 'kid') addRel(S, o, ri(S, 1, 2), ch, false, true); }); break; }
       case 'either': applyFx(S, [rnd(S) < 0.5 ? f.a : f.b], ctx, ch, opt); break;
@@ -707,6 +709,7 @@ function pround(S, x) { const f = Math.floor(Math.abs(x)); const fr = Math.abs(x
 function addPop(S, v, ch) { const o = S.pop;
   if (v > 0 && S.pop > 55) v = pround(S, v * clamp((100 - S.pop) / 45, 0.25, 1));
   else if (v < 0 && S.pop < 30) v = pround(S, v * 1.3); S.pop = clamp(S.pop + v, 0, 100); if (ch && S.pop !== o) ch.push({ k: 'pop', v: S.pop - o }); checkOver(S); }
+function addGossip(S, v, ch) { S.gossip += v; setFlag(S, 'GOSSIP'); ch.push({ k: 'gossip', v }); }
 function addGrade(S, v, ch) { const o = S.grade; S.grade = clamp(S.grade + v, 0, 100); if (ch && S.grade !== o) ch.push({ k: 'grade', v: S.grade - o }); }
 function addMoney(S, v, ch) { const o = S.money; S.money = Math.max(0, S.money + v); if (v > 0) S.earned += v; else S.spent += -v; if (ch && S.money !== o) ch.push({ k: 'money', v: S.money - o }); }
 function checkOver(S) {
@@ -942,7 +945,7 @@ function chooseBall(S, c, ev) {
 /* ---------- the Ball ---------- */
 // A five-scene night (outfit, dance floor, rumour, photos, last dance) on BALL_DAY.
 const BALL_STAGES = 5;
-function ballFoe(S) { const lo = metKids(S).slice().sort((a, b) => S.rel[a] - S.rel[b])[0]; return S.rel[lo] < -10 ? lo : null; }
+function ballFoe(S) { const lo = lowestKid(S); return S.rel[lo] < -10 ? lo : null; }
 function ballFriend(S) { return S.ballDate || knownRank(S, metKids(S))[0]; }
 function ballScene(S, st) {
   const ctx = makeCtx(S, 'ball' + st, ''); const fr = ballFriend(S); const foe = ballFoe(S);
@@ -998,6 +1001,11 @@ function ballScene(S, st) {
     ['Slip out quietly', ''],
   ]);
 }
+// lowers several relationships by v (negative) until `cap` points in total are lost; no ripple
+function hitEach(S, names, v, cap, ch) {
+  let tot = 0;
+  names.forEach(n => { if (tot < cap) { addRel(S, n, v, ch, false, true); tot -= v; } });
+}
 function ballEnd(S) { S.pend = null; S.phase = 'free'; }
 function chooseBallScene(S, c, ev) {
   const ch = [], lines = []; const ctx = ev.ctx;
@@ -1009,18 +1017,18 @@ function chooseBallScene(S, c, ev) {
   } else if (c.gossip) {
     const T = c.gossip; applyFx(S, fxs('gos+1'), ctx, ch);
     if (rnd(S) < 0.55) {
-      addRel(S, T, -10, ch); let tot = 0;
-      (LINKS[T] || []).filter(l => l[1] >= 2 && CH[l[0]].role === 'kid').forEach(([o]) => { if (tot < 30) { addRel(S, o, -5, ch, false, true); tot += 5; } });
+      addRel(S, T, -10, ch);
+      hitEach(S, (LINKS[T] || []).filter(l => l[1] >= 2 && CH[l[0]].role === 'kid').map(l => l[0]), -5, 30, ch);
       addPop(S, 2, ch); setFlag(S, 'GOSSIP'); lines.push('It reached ' + T + ' before the song ended. Close friends took sides.');
     } else { addPop(S, 1, ch); lines.push('The story fizzled. Nobody repeated it.'); }
   } else if (c.blame) {
     const T = c.blame; setFlag(S, 'BLAME_SHIFT');
     if (rnd(S) < 0.3) {
-      addRel(S, T, -15, ch); let tot = 0; witnesses(T).forEach(w => { if (tot < 30) { addRel(S, w, -10, ch, false, true); tot += 10; } });
+      addRel(S, T, -15, ch); hitEach(S, witnesses(T), -10, 30, ch);
       addPop(S, -3, ch); setFlag(S, 'HYPOCRISY'); lines.push('Someone had the screenshot. The blame bounced right back onto you.');
     } else { addPop(S, 1, ch); lines.push('The blame stuck to someone else. It feels worse than you expected.'); }
   } else if (c.hide) {
-    if (rnd(S) < 0.5) { let tot = 0; witnesses(ev.ctx.T).forEach(w => { if (tot < 80) { addRel(S, w, -10, ch, false, true); tot += 10; } }); addPop(S, -2, ch); setFlag(S, 'HYPOCRISY'); lines.push('Two people compared notes. The versions did not match.'); }
+    if (rnd(S) < 0.5) { hitEach(S, witnesses(ev.ctx.T), -10, 80, ch); addPop(S, -2, ch); setFlag(S, 'HYPOCRISY'); lines.push('Two people compared notes. The versions did not match.'); }
     else lines.push('Nobody connected the dots tonight.');
   } else applyFx(S, c.fx, ctx, ch);
   if (c.appol) { S.apol = S.apol || {}; S.apol[c.appol] = (S.apol[c.appol] || 0) + 1; S.apolN = (S.apolN || 0) + 1; }
@@ -1409,9 +1417,9 @@ function interact(S, name, id, arg) {
     case 'start': {
       S.hurt[name] = (S.hurt[name] || 0) + 1;
       lines.push('You invent a story about ' + name + '.');
-      S.started++; setFlag(S, 'STARTED_RUMOR'); addPop(S, 2, ch); S.gossip++; setFlag(S, 'GOSSIP'); ch.push({ k: 'gossip', v: 1 });
+      S.started++; setFlag(S, 'STARTED_RUMOR'); addPop(S, 2, ch); addGossip(S, 1, ch);
       if (v >= 15) setFlag(S, 'HYPOCRISY');
-      const reach = clamp(55 + 10 * Math.min(3, closeFriends(S, name)), 0, 85);
+      const reach = rumorReach(S, name, 0, 85);
       if (rnd(S) * 100 < reach) {
         addRel(S, name, -ri(S, 8, 15), ch); lines.push('It reaches ' + name + '.');
         if (rnd(S) < 0.4) { addPop(S, -ri(S, 5, 15), ch); setFlag(S, 'RUMOR_DISPROVEN'); S.caught++; lines.push('The story falls apart and people know it was you.'); }
@@ -1462,13 +1470,13 @@ function interact(S, name, id, arg) {
       const rb = S.rel[subj];
       logt = 'Talked about ' + subj + ' with ' + name;
       if (tone === 'bad') {
-        S.gossip++; setFlag(S, 'GOSSIP'); ch.push({ k: 'gossip', v: 1 });
+        addGossip(S, 1, ch);
         S.talked = S.talked || {}; S.talked[subj] = (S.talked[subj] || 0) + 1; S.hurt[subj] = (S.hurt[subj] || 0) + 1;
         if (rb >= 15) { setFlag(S, 'HYPOCRISY'); lines.push('You smile at ' + subj + ' in person, but here you are tearing them apart.'); }
         if (k < 0) { addRel(S, name, 3, ch); addPop(S, 1, ch); lines.push(name + ' laughs. They do not like ' + subj + ' either.'); }
         else if (k >= 2) { addRel(S, name, -3, ch); lines.push(name + ' frowns. ' + subj + ' is a close friend of theirs.'); }
         else { addRel(S, name, 1, ch); lines.push(name + ' listens with interest.'); }
-        const reach = clamp(55 + 10 * Math.min(3, closeFriends(S, subj)) + (k >= 2 ? 20 : 0), 0, 90);
+        const reach = rumorReach(S, subj, k >= 2 ? 20 : 0, 90);
         if (rnd(S) * 100 < reach) {
           addRel(S, subj, -ri(S, 5, 15), ch); lines.push('Word gets back to ' + subj + '.');
           if (F(S, 'HYPOCRISY') && rb >= 15 && rnd(S) < 0.4) { setFlag(S, 'HYPOCRISY_EXPOSED'); S.caught++; addPop(S, -3, ch); lines.push('They know you said it while acting like a friend. People notice.'); }
@@ -1527,14 +1535,16 @@ function interact(S, name, id, arg) {
   return result(ch, lines);
 }
 function closeFriends(S, name) { return (LINKS[name] || []).filter(([o, k]) => k >= 2).length; }
+// % chance that talk about `name` gets back to them: more close friends, faster spread
+function rumorReach(S, name, bonus, max) { return clamp(55 + 10 * Math.min(3, closeFriends(S, name)) + bonus, 0, max); }
 function shareRumor(S, name, r, ch, lines, quiet) {
   const typ = r[0]; setFlag(S, 'REPEATED_RUMOUR');
   if (typ === 'neg') {
     S.hurt[name] = (S.hurt[name] || 0) + 1;
-    S.gossip++; setFlag(S, 'GOSSIP'); ch.push({ k: 'gossip', v: 1 });
+    addGossip(S, 1, ch);
     if (S.rel[name] >= 15) { setFlag(S, 'HYPOCRISY'); lines.push('You talk behind the back of someone you call a friend.'); }
     addPop(S, 1, ch);
-    const reach = clamp(55 + 10 * Math.min(3, closeFriends(S, name)), 0, 85);
+    const reach = rumorReach(S, name, 0, 85);
     if (rnd(S) * 100 < reach) { addRel(S, name, -ri(S, 5, 15), ch); lines.push('It reaches ' + name + '.'); } else lines.push('It spreads, but not to ' + name + '.');
     if (rnd(S) < 0.2) { addPop(S, -2, ch); S.caught++; lines.push('People think you are a gossip.'); }
   } else {
