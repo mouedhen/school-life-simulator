@@ -2835,8 +2835,8 @@ function viewMenu() {
           'Not signed in here: saves stay in this browser only.',
           'Mode hors compte : les sauvegardes restent dans ce navigateur.',
         )) +
-    `${Store.cloudErr ? ' (cloud save failed once)' : ''}</p></div>\n  <div class="card">` +
-    `<h3>${t('Final stats')}</h3>${statBoxes()}</div>`
+    (`${Store.cloudErr ? ' (cloud save failed once)' : ''}</p></div>\n  <div class="card">` +
+      `<h3>${t('Final stats')}</h3>${statBoxes()}</div>`)
   );
 }
 
