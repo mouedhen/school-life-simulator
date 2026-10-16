@@ -1288,13 +1288,13 @@ function viewToday() {
         'Actions use time blocks. When you are done, end the day.',
         'Chaque action prend des blocs de temps. Quand tu as fini, termine la journée.',
       ) +
-      `</p>\n    <div class="row">` +
-      `<button class="btn small" data-act="study" ${S.blocks < 1 ? 'disabled' : ''}>📚 ${t('Study')} (1)` +
-      `</button><button class="btn small" data-act="tab" data-v="people">💬 ${t('People')}</button>` +
-      `<button class="btn small" data-act="phone">📱 ${L('Phone', 'Téléphone')}${phBadge()}</button>` +
-      `<button class="btn small" data-act="tab" data-v="shop">🛍 ${t('Shop')}</button>${work}</div>\n    ` +
-      `<div class="row" style="margin-top:12px">` +
-      `<button class="btn primary" data-act="endday">${t('End day')} →</button></div></div>`;
+      (`</p>\n    <div class="row">` +
+        `<button class="btn small" data-act="study" ${S.blocks < 1 ? 'disabled' : ''}>📚 ${t('Study')} (1)` +
+        `</button><button class="btn small" data-act="tab" data-v="people">💬 ${t('People')}</button>` +
+        `<button class="btn small" data-act="phone">📱 ${L('Phone', 'Téléphone')}${phBadge()}</button>` +
+        `<button class="btn small" data-act="tab" data-v="shop">🛍 ${t('Shop')}</button>${work}</div>\n    ` +
+        `<div class="row" style="margin-top:12px">` +
+        `<button class="btn primary" data-act="endday">${t('End day')} →</button></div></div>`);
   }
   const lastE = S.log.slice(-1)[0];
   return (
