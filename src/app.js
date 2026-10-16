@@ -4954,31 +4954,108 @@ function showHelp() {
 
 /* ---------- game start & people interactions ---------- */
 async function startNew() {
-  const p = await Store.prefs(); const prev = p.name || ''; V.trait = 'bal'; V.ngpOn = false; const hasRuns = (p.runs || []).length > 0;
-  const T = TRAITS(); const chips = T.map(x => `<button class="btn trait ${x[0] === 'bal' ? 'primary' : ''}" data-act="trait" data-v="${x[0]}" aria-pressed="${x[0] === 'bal'}">${x[1]}</button>`).join('');
+  const p = await Store.prefs();
+  const prev = p.name || '';
+  V.trait = 'bal';
+  V.ngpOn = false;
+  const hasRuns = (p.runs || []).length > 0;
+  const T = TRAITS();
+  const chips = T.map(
+    x =>
+      `<button class="btn trait ${x[0] === 'bal' ? 'primary' : ''}" data-act="trait" data-v="${x[0]}" aria-pressed="${x[0] === 'bal'}">` +
+      `${x[1]}</button>`,
+  ).join('');
   const dl = T.map(x => `<li><b>${x[1]}</b>: ${x[2]}</li>`).join('');
-  openModal(head(L('Your name', 'Ton nom'), '') + `<p>${L('This is your character\'s name. They are not you: you are the one who decides for them. It replaces “MC” in what characters say.', 'C\'est le nom de ton personnage. Il n\'est pas toi : c\'est toi qui décides pour lui. Il remplace « MC » dans les dialogues.')}</p><input id="pname" class="nm-in" maxlength="16" autocomplete="off" placeholder="${L('Your name', 'Ton prénom')}" value="${ea(prev === 'MC' ? '' : prev)}">
-  <h3 style="margin:14px 0 6px">${L('How does the year start?', 'Comment commence l\'année ?')}</h3><div class="row">${chips}</div><ul class="traitlist small muted">${dl}</ul>
-  ${hasRuns ? `<div class="row" style="margin-top:6px"><button class="btn ghost" data-act="ngp" aria-pressed="false">${L('New Game+ bonus', 'Bonus Nouvelle partie+')}</button></div><p class="small muted" style="margin:6px 0 0">${L('+$20, and your closest friend from your last run starts the year at +20.', '+20 $, et ton meilleur ami de la dernière partie commence l\'année à +20.')}</p>` : ''}
-  <div class="row" style="margin-top:14px"><button class="btn primary" data-act="begin">${L('Begin', 'Commencer')}</button><button class="btn ghost" data-act="close">${t('Close')}</button></div>`);
-  setTimeout(() => { const i = $('#pname'); if (i) i.focus(); }, 60);
+  openModal(
+    head(L('Your name', 'Ton nom'), '') +
+      (`<p>` +
+        L(
+          "This is your character's name. They are not you: you are the one who decides for them. It replaces “MC” in what characters say.",
+          "C'est le nom de ton personnage. Il n'est pas toi : c'est toi qui décides pour lui. Il remplace « MC » dans les dialogues.",
+        ) +
+        `</p>` +
+        `<input id="pname" class="nm-in" maxlength="16" autocomplete="off" placeholder="${L('Your name', 'Ton prénom')}"` +
+        ` value="${ea(prev === 'MC' ? '' : prev)}">\n  ` +
+        `<h3 style="margin:14px 0 6px">${L('How does the year start?', "Comment commence l'année ?")}</h3>` +
+        `<div class="row">${chips}</div><ul class="traitlist small muted">${dl}</ul>\n  ` +
+        (hasRuns
+          ? `<div class="row" style="margin-top:6px">` +
+            `<button class="btn ghost" data-act="ngp" aria-pressed="false">${L('New Game+ bonus', 'Bonus Nouvelle partie+')}` +
+            `</button></div><p class="small muted" style="margin:6px 0 0">` +
+            L(
+              '+$20, and your closest friend from your last run starts the year at +20.',
+              "+20 $, et ton meilleur ami de la dernière partie commence l'année à +20.",
+            ) +
+            `</p>`
+          : '') +
+        `\n  <div class="row" style="margin-top:14px">` +
+        `<button class="btn primary" data-act="begin">${L('Begin', 'Commencer')}</button>` +
+        `<button class="btn ghost" data-act="close">${t('Close')}</button></div>`),
+  );
+  setTimeout(() => {
+    const i = $('#pname');
+    if (i) i.focus();
+  }, 60);
 }
 async function beginGame() {
-  const i = $('#pname'); let nm = ((i && i.value) || '').replace(/[<>&"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
-  if (!nm) { toast(L('Type a name first.', 'Écris un nom.')); return; }
-  const p = await Store.prefs(); Store.prefs(Object.assign({}, p, { name: nm }));
-  S = E.newGame(undefined, (V.seen || []).length > 0); S.name = nm; S.mem = memOf(p.runs); S.note = (V.revealed && p.note) ? String(p.note).slice(0, 120) : ''; applyTrait(S, V.trait, p, V.ngpOn); V.overDone = false; V.tab = 'today'; V.calM = 0; closeModal(); render(); if (!p.tut) startTut(true); else showEvent(); Store.put('auto', S);
+  const i = $('#pname');
+  let nm = ((i && i.value) || '')
+    .replace(/[<>&"]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 16);
+  if (!nm) {
+    toast(L('Type a name first.', 'Écris un nom.'));
+    return;
+  }
+  const p = await Store.prefs();
+  Store.prefs(Object.assign({}, p, { name: nm }));
+  S = E.newGame(undefined, (V.seen || []).length > 0);
+  S.name = nm;
+  S.mem = memOf(p.runs);
+  S.note = V.revealed && p.note ? String(p.note).slice(0, 120) : '';
+  applyTrait(S, V.trait, p, V.ngpOn);
+  V.overDone = false;
+  V.tab = 'today';
+  V.calM = 0;
+  closeModal();
+  render();
+  if (!p.tut) startTut(true);
+  else showEvent();
+  Store.put('auto', S);
 }
-function personAfter(r, title) { V.res = r; V.resTitle = title || 'Done'; if (r && r.err) { V.res = { chips: [], lines: [], err: r.err }; } Store.autosave(S); render(); renderModal(); }
+function personAfter(r, title) {
+  V.res = r;
+  V.resTitle = title || 'Done';
+  if (r && r.err) {
+    V.res = { chips: [], lines: [], err: r.err };
+  }
+  Store.autosave(S);
+  render();
+  renderModal();
+}
 function doInter(name, id, arg) {
-  const r = E.interact(S, name, id, arg); V.sub = null;
+  const r = E.interact(S, name, id, arg);
+  V.sub = null;
   if (!r) return;
-  if (r.err) { V.res = null; toast(r.err); renderModal(); return; }
-  V.res = r; V.resTitle = 'Done';
-  Store.autosave(S); renderBehind(); renderModal();
-  if (S.over) { /* handled on close */ }
+  if (r.err) {
+    V.res = null;
+    toast(r.err);
+    renderModal();
+    return;
+  }
+  V.res = r;
+  V.resTitle = 'Done';
+  Store.autosave(S);
+  renderBehind();
+  renderModal();
+  if (S.over) {
+    /* handled on close */
+  }
 }
-function renderBehind() { render(); }
+function renderBehind() {
+  render();
+}
 
 /* ---------- click actions ---------- */
 /* Every clickable element has data-act="<name>" and often data-v="<value>". onClick() finds the action
