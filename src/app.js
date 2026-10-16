@@ -1648,104 +1648,390 @@ function diaryDay(l) {
   return diary(l);
 }
 /* ---------- journal: pages ---------- */
-const dayHead = d => { const dt = new Date(d + 'T12:00:00Z'); return dt.toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }); };
-const rot = s => (((hsh(s) % 9) - 4) / 10);
-function pg(inner, num, cls, face) { return `<div class="pg ${cls || ''} ${face ? 'f' + face : ''}"><div class="inner">${inner}</div>${num ? `<div class="pn">— ${num} —</div>` : ''}</div>`; }
-const PEN = ['#1f4e8c', '#2e6b3a', '#6b2f8c', '#0f6b6b', '#a65a00', '#8c2f5a', '#3d3d9c', '#6b6b00', '#2b6f87', '#7a3b1d'];
-function penOf(name) { V.pens = V.pens || {}; if (!V.pens[name]) V.pens[name] = PEN[Object.keys(V.pens).length % PEN.length]; return V.pens[name]; }
+const dayHead = d => {
+  const dt = new Date(d + 'T12:00:00Z');
+  return dt.toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
+};
+const rot = s => ((hsh(s) % 9) - 4) / 10;
+function pg(inner, num, cls, face) {
+  return (
+    `<div class="pg ${cls || ''} ${face ? 'f' + face : ''}"><div class="inner">${inner}</div>` +
+    (num ? `<div class="pn">— ${num} —</div>` : '') +
+    `</div>`
+  );
+}
+const PEN = [
+  '#1f4e8c',
+  '#2e6b3a',
+  '#6b2f8c',
+  '#0f6b6b',
+  '#a65a00',
+  '#8c2f5a',
+  '#3d3d9c',
+  '#6b6b00',
+  '#2b6f87',
+  '#7a3b1d',
+];
+function penOf(name) {
+  V.pens = V.pens || {};
+  if (!V.pens[name]) V.pens[name] = PEN[Object.keys(V.pens).length % PEN.length];
+  return V.pens[name];
+}
 /* the Player's own hand: pencil margin notes (a separate character from MC), written in faint ink */
-const PL_UP = ['That felt right. I think.', 'Good choice. I smiled at this one.', 'Nice. Keep going, you are doing fine.', 'I liked this day.'];
-const PL_DN = ['I am sorry. That one was on me.', 'I was not sure about that choice. I should have waited.', 'I wish I had picked differently.', 'Rough day. I felt it too.'];
-const PL_NEU = ['A quiet day. I do not mind those.', 'I was just watching today.', 'Nothing dramatic. I like the quiet ones.', 'Small days matter too.'];
-const PL_RUN = ['I remember this day. It went differently last time.', 'I am trying something new this time.', 'I know how this part goes. I hope I am kinder now.', 'Last time I got this wrong. Sorry.'];
-const PL_REPLY = ['I hear you. I am here.', 'I am sorry I keep coming back. I want to get it right.', 'It matters. You matter.', 'Thank you for writing to me.'];
-const PL_HOL = ['A day off. I think we both needed this.', 'Holidays feel softer from where I sit.', 'No bells today. I like how quiet it is.', 'Rest is part of the story too.'];
-const PL_BD = ['Remembering a birthday is a small kind of magic.', 'I like how you made someone feel seen today.', 'Cake or no cake, it counted.'];
-const PL_WORK = ['You earned that yourself. I noticed.', 'Hard work looks good on you.', 'Pocket money feels different when you earn it.'];
-const PL_LOW = ['Your popularity is low right now. I am worried, and I am here.', 'Take a breath. One kind choice can turn a week around.', 'Do not give up on the people who are still here.'];
-const PL_BALL = ['Tonight is the one I have been waiting for. I hope you feel brave.', 'Whatever happens at the Ball, I am proud of this year.'];
-const PL_FAM = ['Family days are the ones I remember longest.', 'Your family noticed. I know they did.', 'Home is part of the story too.'];
-const PL_TEST = ['Tests are scary. You were braver than you think.', 'Whatever the score, you showed up.', 'One result is not the whole year.'];
+const PL_UP = [
+  'That felt right. I think.',
+  'Good choice. I smiled at this one.',
+  'Nice. Keep going, you are doing fine.',
+  'I liked this day.',
+];
+const PL_DN = [
+  'I am sorry. That one was on me.',
+  'I was not sure about that choice. I should have waited.',
+  'I wish I had picked differently.',
+  'Rough day. I felt it too.',
+];
+const PL_NEU = [
+  'A quiet day. I do not mind those.',
+  'I was just watching today.',
+  'Nothing dramatic. I like the quiet ones.',
+  'Small days matter too.',
+];
+const PL_RUN = [
+  'I remember this day. It went differently last time.',
+  'I am trying something new this time.',
+  'I know how this part goes. I hope I am kinder now.',
+  'Last time I got this wrong. Sorry.',
+];
+const PL_REPLY = [
+  'I hear you. I am here.',
+  'I am sorry I keep coming back. I want to get it right.',
+  'It matters. You matter.',
+  'Thank you for writing to me.',
+];
+const PL_HOL = [
+  'A day off. I think we both needed this.',
+  'Holidays feel softer from where I sit.',
+  'No bells today. I like how quiet it is.',
+  'Rest is part of the story too.',
+];
+const PL_BD = [
+  'Remembering a birthday is a small kind of magic.',
+  'I like how you made someone feel seen today.',
+  'Cake or no cake, it counted.',
+];
+const PL_WORK = [
+  'You earned that yourself. I noticed.',
+  'Hard work looks good on you.',
+  'Pocket money feels different when you earn it.',
+];
+const PL_LOW = [
+  'Your popularity is low right now. I am worried, and I am here.',
+  'Take a breath. One kind choice can turn a week around.',
+  'Do not give up on the people who are still here.',
+];
+const PL_BALL = [
+  'Tonight is the one I have been waiting for. I hope you feel brave.',
+  'Whatever happens at the Ball, I am proud of this year.',
+];
+const PL_FAM = [
+  'Family days are the ones I remember longest.',
+  'Your family noticed. I know they did.',
+  'Home is part of the story too.',
+];
+const PL_TEST = [
+  'Tests are scary. You were braver than you think.',
+  'Whatever the score, you showed up.',
+  'One result is not the whole year.',
+];
 function plNote(i, T, hasLog) {
-  const date = E.DAYS[i].d; const m = S.mem; let t = null; const lg = hasLog ? S.log.filter(l => l.d === date).map(l => l.t).join(' | ') : '';
-  if (i === 0) t = m ? 'Hello again, ' + myName() + '. I came back. — P.' : 'Hi. I am the one choosing. I will try to be good to you. — P.';
+  const date = E.DAYS[i].d;
+  const m = S.mem;
+  let t = null;
+  const lg = hasLog
+    ? S.log
+        .filter(l => l.d === date)
+        .map(l => l.t)
+        .join(' | ')
+    : '';
+  if (i === 0)
+    t = m
+      ? 'Hello again, ' + myName() + '. I came back. — P.'
+      : 'Hi. I am the one choosing. I will try to be good to you. — P.';
   else if (hasLog && date === E.BALL_DAY) t = pk(PL_BALL, date + 'pb') + ' — P.';
   else if (hasLog && Object.values(E.HOLIDAYS).some(h => lg.includes(h.t))) t = pk(PL_HOL, date + 'ph') + ' — P.';
   else if (hasLog && /birthday/i.test(lg)) t = pk(PL_BD, date + 'pd') + ' — P.';
   else if (hasLog && /Worked:/.test(lg) && hsh(date + 'pw') % 2 === 0) t = pk(PL_WORK, date + 'pw2') + ' — P.';
   else if (hasLog && S.pop <= 20 && i >= S.di - 6 && hsh(date + 'pl') % 2 === 0) t = pk(PL_LOW, date + 'pl2') + ' — P.';
   else if (hasLog && /\b(Mom|Dad)\b/.test(lg) && hsh(date + 'pf') % 3 === 0) t = pk(PL_FAM, date + 'pf2') + ' — P.';
-  else if (hasLog && /test|quiz|exam|checkpoint/i.test(lg) && hsh(date + 'pt') % 3 === 0) t = pk(PL_TEST, date + 'pt2') + ' — P.';
+  else if (hasLog && /test|quiz|exam|checkpoint/i.test(lg) && hsh(date + 'pt') % 3 === 0)
+    t = pk(PL_TEST, date + 'pt2') + ' — P.';
   else if (hsh(S.seed + 'pl' + i) % 9 === 0 && hasLog) {
-    const sc = T.cl; const up = CLOSE_UP.includes(sc), dn = CLOSE_DN.includes(sc);
-    const pools = [up ? PL_UP : dn ? PL_DN : PL_NEU]; if (m) pools.push(PL_RUN); if (m && m.n >= 3) pools.push(PL_REPLY);
+    const sc = T.cl;
+    const up = CLOSE_UP.includes(sc),
+      dn = CLOSE_DN.includes(sc);
+    const pools = [up ? PL_UP : dn ? PL_DN : PL_NEU];
+    if (m) pools.push(PL_RUN);
+    if (m && m.n >= 3) pools.push(PL_REPLY);
     t = pk(pools[hsh(date + 'pp') % pools.length], date + 'pq') + ' — P.';
   }
   if (t && i === 0 && !(S.meta && S.meta.clues >= 3)) t = 'Can you read this?';
-  else if (t) t = t.replace(/ — P\.$/, (S.meta && S.meta.clues >= 6) ? ' — P.' : '');
-  return t ? `<p class="pl fink${V.clues && V.clues['n:' + date] ? ' on' : ''}" data-clue="n:${date}" tabindex="0" role="note" data-opt="3" style="transform:rotate(${(rot(date + 'P') * 5).toFixed(1)}deg)">${Object.keys(V.clues || {}).length ? '' : '<i class="blot" aria-hidden="true"></i>'}${esc(t)}</p>` : '';
+  else if (t) t = t.replace(/ — P\.$/, S.meta && S.meta.clues >= 6 ? ' — P.' : '');
+  return t
+    ? `<p class="pl fink${V.clues && V.clues['n:' + date] ? ' on' : ''}" data-clue="n:${date}" tabindex="0" role="note" data-opt="3"` +
+        ` style="transform:rotate(${(rot(date + 'P') * 5).toFixed(1)}deg)">` +
+        (Object.keys(V.clues || {}).length ? '' : '<i class="blot" aria-hidden="true"></i>') +
+        `${esc(t)}</p>`
+    : '';
 }
 function jPageHtml(i, face) {
-  const nD = E.DAYS.length; const num = i + 1;
+  const nD = E.DAYS.length;
+  const num = i + 1;
   if (i < nD) {
-    const d = E.DAYS[i].d; const has = S.log.some(l => l.d === d);
+    const d = E.DAYS[i].d;
+    const has = S.log.some(l => l.d === d);
     if (i > S.di) return pg(`<h4 class="pencil">${esc(dayHead(d))}</h4>`, num, 'future', face);
-    if (!has && i === S.di) return pg(`<h4>${esc(dayHead(d))}</h4><p class="dd">${esc('Dear diary,')}</p><p class="hw faint">…</p>`, num, '', face);
+    if (!has && i === S.di)
+      return pg(
+        `<h4>${esc(dayHead(d))}</h4><p class="dd">${esc('Dear diary,')}</p><p class="hw faint">…</p>`,
+        num,
+        '',
+        face,
+      );
     const T = dayText(i);
-    const body = `<h4>${esc(dayHead(d))}</h4><p class="dd">${esc('Dear diary,')}</p>` + T.main.map((p, k) => `<p class="hw" style="transform:rotate(${rot(d + k)}deg);margin-left:${hsh(d + k) % 4}px">${esc(p)}</p>`).join('') + (S.th && S.th[d] ? `<p class="hw th" style="transform:rotate(${rot(d + 't')}deg)">${esc(S.th[d])}</p>` : '') + (T.eff.length ? `<p class="hw" style="transform:rotate(${rot(d + 'e')}deg)">${T.eff.map((e, k) => `<span${k ? ' data-opt="1"' : ''}>${esc(e)}</span>`).join(' ')}</p>` : '') + `<p class="hw" data-opt="2">${esc(T.cl)}</p><p class="hw sig">— ${esc(myName())}</p>` + plNote(i, T, has);
+    const body =
+      `<h4>${esc(dayHead(d))}</h4><p class="dd">${esc('Dear diary,')}</p>` +
+      T.main
+        .map(
+          (p, k) =>
+            `<p class="hw" style="transform:rotate(${rot(d + k)}deg);margin-left:${hsh(d + k) % 4}px">${esc(p)}` +
+            `</p>`,
+        )
+        .join('') +
+      (S.th && S.th[d] ? `<p class="hw th" style="transform:rotate(${rot(d + 't')}deg)">${esc(S.th[d])}</p>` : '') +
+      (T.eff.length
+        ? `<p class="hw" style="transform:rotate(${rot(d + 'e')}deg)">` +
+          T.eff.map((e, k) => `<span${k ? ' data-opt="1"' : ''}>${esc(e)}</span>`).join(' ') +
+          `</p>`
+        : '') +
+      `<p class="hw" data-opt="2">${esc(T.cl)}</p><p class="hw sig">— ${esc(myName())}</p>` +
+      plNote(i, T, has);
     return pg(body, num, '', face);
   }
-  const k = i - nD; const done = S.ending || S.over;
-  if (!done) return pg(`<h4 class="pencil">${k === 0 ? 'The last pages' : ''}</h4><p class="hw faint">${k === 0 ? 'These pages are still blank. Some stories can only be written once the year is over.' : ''}</p>`, num, 'future', face);
+  const k = i - nD;
+  const done = S.ending || S.over;
+  if (!done)
+    return pg(
+      `<h4 class="pencil">${k === 0 ? 'The last pages' : ''}</h4><p class="hw faint">` +
+        (k === 0 ? 'These pages are still blank. Some stories can only be written once the year is over.' : '') +
+        `</p>`,
+      num,
+      'future',
+      face,
+    );
   return pg(endPage(k), num, 'long', face);
 }
 const FARE = [
-  ['I hope we are not in the same class next year.', 'Do not expect a card from me.', 'Let us just say we are done.', 'Do not wave at me this summer.'],
-  ['Well. Have a nice summer, I guess.', 'It was a year. That is all I will say.', 'See you in the fall. Maybe.', 'Good luck, I suppose.'],
+  [
+    'I hope we are not in the same class next year.',
+    'Do not expect a card from me.',
+    'Let us just say we are done.',
+    'Do not wave at me this summer.',
+  ],
+  [
+    'Well. Have a nice summer, I guess.',
+    'It was a year. That is all I will say.',
+    'See you in the fall. Maybe.',
+    'Good luck, I suppose.',
+  ],
   ['See you around, {n}.', 'Have a good summer!', 'Take care, {n}.', 'Maybe we will talk next year.'],
-  ['It was a good year with you, {n}.', 'Text me this summer, okay?', 'Thanks for being around, {n}.', 'I had fun this year, {n}.'],
-  ['I am really glad we ended up friends, {n}.', 'You made this year better, {n}.', 'Promise you will not forget me, {n}?', 'Best year ever, and a lot of it was you.'],
+  [
+    'It was a good year with you, {n}.',
+    'Text me this summer, okay?',
+    'Thanks for being around, {n}.',
+    'I had fun this year, {n}.',
+  ],
+  [
+    'I am really glad we ended up friends, {n}.',
+    'You made this year better, {n}.',
+    'Promise you will not forget me, {n}?',
+    'Best year ever, and a lot of it was you.',
+  ],
 ];
 function fare(name) {
-  const v = S.rel[name]; const t = v <= -40 ? 0 : v <= -10 ? 1 : v < 20 ? 2 : v < 60 ? 3 : 4; const f = pk(FARE[t], name + 'f' + S.pop).replace('{n}', myName());
+  const v = S.rel[name];
+  const t = v <= -40 ? 0 : v <= -10 ? 1 : v < 20 ? 2 : v < 60 ? 3 : 4;
+  const f = pk(FARE[t], name + 'f' + S.pop).replace('{n}', myName());
   const col = penOf(name);
   return `<p class="hw" style="color:${col}"><span class="who">${esc(fn1(name))}:</span> “${esc(f)}”</p>`;
 }
-const nar = t => `<p class="hw nar">${esc(t)}</p>`, mcp = t => `<p class="hw mc">${esc(t)}</p>`;
+const nar = t => `<p class="hw nar">${esc(t)}</p>`,
+  mcp = t => `<p class="hw mc">${esc(t)}</p>`;
 function plEnd(good) {
   const m = S.mem;
-  return `<p class="pl fink${V.clues && V.clues['n:end'] ? ' on' : ''}" data-clue="n:end" tabindex="0" role="note" style="transform:rotate(-2deg);margin:0 0 .6em">${esc((good ? 'Thank you for letting me write this with you, ' + myName() + '.' : 'I am sorry, ' + myName() + '. I would like to try again, and do better by you.') + (m && m.n >= 2 ? ' This is not our first year together.' : '') + ((S.meta && S.meta.clues >= 6) ? ' — P.' : ''))}</p>`;
+  return (
+    `<p class="pl fink${V.clues && V.clues['n:end'] ? ' on' : ''}" data-clue="n:end" tabindex="0" role="note"` +
+    ` style="transform:rotate(-2deg);margin:0 0 .6em">` +
+    esc(
+      (good
+        ? 'Thank you for letting me write this with you, ' + myName() + '.'
+        : 'I am sorry, ' + myName() + '. I would like to try again, and do better by you.') +
+        (m && m.n >= 2 ? ' This is not our first year together.' : '') +
+        (S.meta && S.meta.clues >= 6 ? ' — P.' : ''),
+    ) +
+    `</p>`
+  );
 }
 function endPage(k) {
-  const x = E.stats(S); const nm = myName();
-  const kids = E.metKids(S).slice().sort((a, b) => S.rel[b] - S.rel[a]); const best = kids[0], worst = kids[kids.length - 1];
-  const day = E.dayOf(S).d; const over = S.over && !S.ending;
-  const en = S.ending ? E.ENDBY[S.ending.id] : null; const epi = S.ending ? S.ending.epi.map(id => E.ENDBY[id]).filter(Boolean) : [];
+  const x = E.stats(S);
+  const nm = myName();
+  const kids = E.metKids(S)
+    .slice()
+    .sort((a, b) => S.rel[b] - S.rel[a]);
+  const best = kids[0],
+    worst = kids[kids.length - 1];
+  const day = E.dayOf(S).d;
+  const over = S.over && !S.ending;
+  const en = S.ending ? E.ENDBY[S.ending.id] : null;
+  const epi = S.ending ? S.ending.epi.map(id => E.ENDBY[id]).filter(Boolean) : [];
   const h = t => `<h4 class="nar">${esc(t)}</h4>`;
   if (over) {
-    if (k === 0) return h('The day it all fell apart') + nar('It was ' + dayHead(day) + '. ' + nm + ' looked around the hallway and realised that nobody was looking back. Popularity had run out, and with it, a place in this school.') + mcp('I did not see it happening until it was already done.');
-    if (k === 1) return h('How it got there') + nar('There were ' + S.log.length + ' entries in this book. Each one looked small on the day it was written.') + mcp('Reading them again, I can see the moments where I could have chosen differently.') + mcp(worst && S.rel[worst] < 0 ? fn1(worst) + ' and I never really made peace.' : 'Some people never knew the real me.');
+    if (k === 0)
+      return (
+        h('The day it all fell apart') +
+        nar(
+          'It was ' +
+            dayHead(day) +
+            '. ' +
+            nm +
+            ' looked around the hallway and realised that nobody was looking back. Popularity had run out, and with it, a place in this school.',
+        ) +
+        mcp('I did not see it happening until it was already done.')
+      );
+    if (k === 1)
+      return (
+        h('How it got there') +
+        nar('There were ' + S.log.length + ' entries in this book. Each one looked small on the day it was written.') +
+        mcp('Reading them again, I can see the moments where I could have chosen differently.') +
+        mcp(
+          worst && S.rel[worst] < 0
+            ? fn1(worst) + ' and I never really made peace.'
+            : 'Some people never knew the real me.',
+        )
+      );
     if (k === 2) return h('What they said') + nar('Nobody made a speech.') + fare(best) + fare(worst);
-    if (k === 3) return h('What might have been') + nar('Being liked and being known are two different things. ' + nm + ' learned that the hard way.') + mcp('I wish I had asked more people how they were. I wish I had said sorry sooner.');
-    return h('The last line') + nar('The journal does not end here. The person writing in it does not have to either.') + mcp('This is not how I wanted my year to end. But I am still here, and I am still writing.') + `<p class="hw sig mc">— ${esc(nm)}</p>`;
+    if (k === 3)
+      return (
+        h('What might have been') +
+        nar('Being liked and being known are two different things. ' + nm + ' learned that the hard way.') +
+        mcp('I wish I had asked more people how they were. I wish I had said sorry sooner.')
+      );
+    return (
+      h('The last line') +
+      nar('The journal does not end here. The person writing in it does not have to either.') +
+      mcp('This is not how I wanted my year to end. But I am still here, and I am still writing.') +
+      `<p class="hw sig mc">— ${esc(nm)}</p>`
+    );
   }
-  if (k === 0) return h('The last day') + nar('It was ' + dayHead(day) + '. The last bell rang, and the hallways filled with a noise that sounded like summer. ' + nm + ' walked out with POP ' + S.pop + ', a grade of ' + S.grade + ' and $' + S.money + ' in a pocket.') + nar(best ? 'The person ' + nm + ' stayed closest to was ' + fn1(best) + '. ' : '') + nar(worst && S.rel[worst] < -10 ? fn1(worst) + ' was the one thing left unfixed.' : 'No real enemy followed ' + nm + ' out of the gates.') + mcp('I flipped back through this journal tonight. It read like someone else\'s life, and also exactly like mine.');
+  if (k === 0)
+    return (
+      h('The last day') +
+      nar(
+        'It was ' +
+          dayHead(day) +
+          '. The last bell rang, and the hallways filled with a noise that sounded like summer. ' +
+          nm +
+          ' walked out with POP ' +
+          S.pop +
+          ', a grade of ' +
+          S.grade +
+          ' and $' +
+          S.money +
+          ' in a pocket.',
+      ) +
+      nar(best ? 'The person ' + nm + ' stayed closest to was ' + fn1(best) + '. ' : '') +
+      nar(
+        worst && S.rel[worst] < -10
+          ? fn1(worst) + ' was the one thing left unfixed.'
+          : 'No real enemy followed ' + nm + ' out of the gates.',
+      ) +
+      mcp("I flipped back through this journal tonight. It read like someone else's life, and also exactly like mine.")
+    );
   if (k === 1) {
     const mq = en.q.replace(/^[“"]|[”"]$/g, '');
-    return h(en.n) + nar(en.moral) + (en.body ? mcp(en.body) : mcp('That is what it came down to. Not one big moment, but a hundred small choices I did not even notice making.')) + `<p class="hw mc big">“${esc(mq)}”</p>`;
+    return (
+      h(en.n) +
+      nar(en.moral) +
+      (en.body
+        ? mcp(en.body)
+        : mcp(
+            'That is what it came down to. Not one big moment, but a hundred small choices I did not even notice making.',
+          )) +
+      `<p class="hw mc big">“${esc(mq)}”</p>`
+    );
   }
   if (k === 2) {
     const mine = kids.slice(0, 3).map(fare).join('');
     const bad = worst && S.rel[worst] < 0 ? fare(worst) : '';
-    const mom = E.CH['Mom'] ? `<p class="hw" style="color:${penOf('Mom')}"><span class="who">${esc('Mom')}:</span> “${esc(S.pop >= 40 ? 'I am proud of you, ' + nm + '.' : 'Whatever happened, I am proud of you, ' + nm + '.')}”</p>` : '';
+    const mom = E.CH['Mom']
+      ? `<p class="hw" style="color:${penOf('Mom')}"><span class="who">${esc('Mom')}:</span> “` +
+        esc(S.pop >= 40 ? 'I am proud of you, ' + nm + '.' : 'Whatever happened, I am proud of you, ' + nm + '.') +
+        `”</p>`
+      : '';
     return h('What they said') + nar('At the gate, a few people stopped.') + mine + bad + mom;
   }
   if (k === 3) {
-    if (!epi.length) return h('Other things to remember') + nar('No other story stuck out as much as the main one.') + mcp('Maybe that is how I know it was real. The smaller moments are still here, in the margins of the pages before this one.');
-    return h('Other things to remember') + epi.map(e => `<p class="hw nar"><b>${esc(e.n)}</b></p><p class="hw mc">“${esc(e.q.replace(/^[“"]|[”"]$/g, ''))}”</p><p class="hw nar">${esc(e.moral)}</p>`).join('');
+    if (!epi.length)
+      return (
+        h('Other things to remember') +
+        nar('No other story stuck out as much as the main one.') +
+        mcp(
+          'Maybe that is how I know it was real. The smaller moments are still here, in the margins of the pages before this one.',
+        )
+      );
+    return (
+      h('Other things to remember') +
+      epi
+        .map(
+          e =>
+            `<p class="hw nar"><b>${esc(e.n)}</b></p><p class="hw mc">“${esc(e.q.replace(/^[“"]|[”"]$/g, ''))}”` +
+            `</p><p class="hw nar">${esc(e.moral)}</p>`,
+        )
+        .join('')
+    );
   }
   const good = !en.bad;
-  return h('What ' + nm + ' feels now') + mcp(good ? 'Strangely, I feel lighter than I thought I would. Not because everything went perfectly, but because I can look at what I did and recognise myself.' : 'I feel heavy, and a bit ashamed. I got what I wanted, and I am not sure I wanted the right thing.') + mcp(x.kind >= 3 ? 'The kind things I did are the parts I would live again.' : 'I wish I had been braver about doing the kind thing more often.') + mcp(S.grade >= 80 ? 'My grades turned out all right, and I earned them.' : S.grade < 50 ? 'My grades were not my best work, and I know it.' : 'My grades were fine. Not amazing, not terrible.') + nar('And that was the year.') + (!S.mem ? mcp('Sometimes it felt like I was not the only one holding the pen.') : mcp(S.mem.last.id === (S.ending && S.ending.id) ? 'The same ending as last time. Maybe some things find us either way.' : 'It ended differently than I felt it would. I am glad.')) + (S.mem && S.mem.n >= 2 ? mcp('To whoever keeps turning my pages: thank you for this year.') : '') + mcp('Next year is a new page.') + `<p class="hw sig mc">— ${esc(nm)}</p>` + plEnd(good);
+  return (
+    h('What ' + nm + ' feels now') +
+    mcp(
+      good
+        ? 'Strangely, I feel lighter than I thought I would. Not because everything went perfectly, but because I can look at what I did and recognise myself.'
+        : 'I feel heavy, and a bit ashamed. I got what I wanted, and I am not sure I wanted the right thing.',
+    ) +
+    mcp(
+      x.kind >= 3
+        ? 'The kind things I did are the parts I would live again.'
+        : 'I wish I had been braver about doing the kind thing more often.',
+    ) +
+    mcp(
+      S.grade >= 80
+        ? 'My grades turned out all right, and I earned them.'
+        : S.grade < 50
+          ? 'My grades were not my best work, and I know it.'
+          : 'My grades were fine. Not amazing, not terrible.',
+    ) +
+    nar('And that was the year.') +
+    (!S.mem
+      ? mcp('Sometimes it felt like I was not the only one holding the pen.')
+      : mcp(
+          S.mem.last.id === (S.ending && S.ending.id)
+            ? 'The same ending as last time. Maybe some things find us either way.'
+            : 'It ended differently than I felt it would. I am glad.',
+        )) +
+    (S.mem && S.mem.n >= 2 ? mcp('To whoever keeps turning my pages: thank you for this year.') : '') +
+    mcp('Next year is a new page.') +
+    `<p class="hw sig mc">— ${esc(nm)}</p>` +
+    plEnd(good)
+  );
 }
 /* ---------- journal: book ---------- */
 /* spreads: s=-1 front cover, 0..100 open spreads, 101 back cover. Spread 0: [endpaper | p1]; s: [p(2s) | p(2s+1)]; 100: [p200 | endpaper] */
