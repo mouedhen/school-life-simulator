@@ -3723,41 +3723,115 @@ function subHtml(name) {
 
 /* ---------- screens ---------- */
 function loginScreen() {
-  const me = Store.me || {}; const nm = V.prefName || '';
-  const av = me.avatarUrl ? `<img class="av" alt="" src="${ea(me.avatarUrl)}" ${me.color ? `style="border-color:${esc(me.color)}"` : ''}>` : '';
+  const me = Store.me || {};
+  const nm = V.prefName || '';
+  const av = me.avatarUrl
+    ? `<img class="av" alt="" src="${ea(me.avatarUrl)}" ${me.color ? `style="border-color:${esc(me.color)}"` : ''}>`
+    : '';
   const body = Store.cloud
-    ? `<p class="muted" style="margin:0;max-width:44ch">${L('Signed in with your Claude account. Your games, your journal and the memory of your past runs follow you from device to device.', 'Connecté avec ton compte Claude. Tes parties, ton journal et la mémoire de tes runs te suivent d\'un appareil à l\'autre.')}</p>
-       <div class="row"><button class="btn primary" data-act="enter">${L('Enter', 'Entrer')}${nm ? ' · ' + esc(nm) : ''}</button></div>`
-    : `<p class="muted" style="margin:0;max-width:44ch">${L('No account detected here. You can play as a guest: saves stay on this device. Open the game from your Claude account to sync them.', 'Aucun compte détecté ici. Tu peux jouer en invité : les sauvegardes restent sur cet appareil. Ouvre le jeu depuis ton compte Claude pour les synchroniser.')}</p>
-       <div class="row"><button class="btn primary" data-act="enter">${L('Play as guest', 'Jouer en invité')}</button></div>`;
-  return `<div class="app"><div class="title-screen"><div class="brand">savepoint</div>${av}<h1>${nm ? L('Welcome back', 'Content de te revoir') + ',<br><span class="ink">' + esc(nm) + '</span>' : 'School Life<br><span class="ink">Simulator</span>'}</h1>
-  <div class="card" style="display:flex;flex-direction:column;gap:12px"><b>${Store.cloud ? '☁ ' + L('Claude account', 'Compte Claude') : L('Guest', 'Invité')}</b>${body}</div>
-  <div class="row">${themeBtn('btn ghost small')}${langBtn('btn ghost small')}</div></div></div>`;
+    ? `<p class="muted" style="margin:0;max-width:44ch">` +
+      L(
+        'Signed in with your Claude account. Your games, your journal and the memory of your past runs follow you from device to device.',
+        "Connecté avec ton compte Claude. Tes parties, ton journal et la mémoire de tes runs te suivent d'un appareil à l'autre.",
+      ) +
+      `</p>\n       <div class="row">` +
+      `<button class="btn primary" data-act="enter">${L('Enter', 'Entrer')}${nm ? ' · ' + esc(nm) : ''}` +
+      `</button></div>`
+    : `<p class="muted" style="margin:0;max-width:44ch">` +
+      L(
+        'No account detected here. You can play as a guest: saves stay on this device. Open the game from your Claude account to sync them.',
+        'Aucun compte détecté ici. Tu peux jouer en invité : les sauvegardes restent sur cet appareil. Ouvre le jeu depuis ton compte Claude pour les synchroniser.',
+      ) +
+      `</p>\n       <div class="row">` +
+      `<button class="btn primary" data-act="enter">${L('Play as guest', 'Jouer en invité')}</button></div>`;
+  return (
+    `<div class="app"><div class="title-screen"><div class="brand">savepoint</div>${av}<h1>` +
+    (nm
+      ? L('Welcome back', 'Content de te revoir') + ',<br><span class="ink">' + esc(nm) + '</span>'
+      : 'School Life<br><span class="ink">Simulator</span>') +
+    `</h1>\n  <div class="card" style="display:flex;flex-direction:column;gap:12px"><b>` +
+    (Store.cloud ? '☁ ' + L('Claude account', 'Compte Claude') : L('Guest', 'Invité')) +
+    `</b>${body}</div>\n  <div class="row">${themeBtn('btn ghost small')}${langBtn('btn ghost small')}` +
+    `</div></div></div>`
+  );
 }
 function titleScreen() {
   const has = V.hasAuto;
-  return `<div class="app"><div class="title-screen"><div class="brand">savepoint${V.clues && V.clues.k0 ? '' : ' <i class="blot" data-reveal="k0" aria-hidden="true"></i>'}</div>${V.clues && V.clues.k0 ? `<p class="small" style="margin:0">${inkHtml('k0', CLUES().k0)}</p>` : ''}<h1>School Life<br><span class="ink">Simulator</span></h1>
-  <p class="muted" style="max-width:46ch;margin:0">${L('One school year. 194 days. Popularity, money, friendships, rumors. Do not hit zero.', 'Une année scolaire. 194 jours. Popularité, argent, amitiés, rumeurs. Ne tombe pas à zéro.')}</p>${clueN() >= 6 ? `<p class="small" style="margin:0">${inkHtml('k8', CLUES().k8)}</p>` : ''}
-  <div class="row">${has ? `<button class="btn primary" data-act="continue">${t('Continue game')}</button>` : ''}<button class="btn ${has ? '' : 'primary'}" data-act="start">${t('New game')}</button><button class="btn ghost" data-act="saves0">${t('Saved games')}</button><button class="btn ghost" data-act="endbook">${t('Endings')}</button></div>
-  <div class="row"><button class="btn ghost small" data-act="settings">${t('Settings')}</button>${themeBtn('btn ghost small')}${langBtn('btn ghost small')}<button class="btn ghost small" data-act="help">${t('Help')}</button><button class="btn ghost small" data-act="stats">${L('Stats', 'Stats')}</button><button class="btn ghost small" data-act="mute" aria-pressed="${!!PREF.muted}">${PREF.muted ? '🔇' : '🔊'} ${L('Sound', 'Son')}</button></div>
-  ${has ? `<p class="small muted" style="margin:0">${Store.cloud ? '☁ ' : ''}${esc(V.autoInfo || '')}</p>` : ''}</div></div>`;
+  return (
+    `<div class="app"><div class="title-screen"><div class="brand">savepoint` +
+    (V.clues && V.clues.k0 ? '' : ' <i class="blot" data-reveal="k0" aria-hidden="true"></i>') +
+    `</div>` +
+    (V.clues && V.clues.k0 ? `<p class="small" style="margin:0">${inkHtml('k0', CLUES().k0)}</p>` : '') +
+    `<h1>School Life<br><span class="ink">Simulator</span></h1>\n  ` +
+    `<p class="muted" style="max-width:46ch;margin:0">` +
+    L(
+      'One school year. 194 days. Popularity, money, friendships, rumors. Do not hit zero.',
+      'Une année scolaire. 194 jours. Popularité, argent, amitiés, rumeurs. Ne tombe pas à zéro.',
+    ) +
+    `</p>` +
+    (clueN() >= 6 ? `<p class="small" style="margin:0">${inkHtml('k8', CLUES().k8)}</p>` : '') +
+    `\n  <div class="row">` +
+    (has ? `<button class="btn primary" data-act="continue">${t('Continue game')}</button>` : '') +
+    `<button class="btn ${has ? '' : 'primary'}" data-act="start">${t('New game')}</button>` +
+    `<button class="btn ghost" data-act="saves0">${t('Saved games')}</button>` +
+    `<button class="btn ghost" data-act="endbook">${t('Endings')}</button></div>\n  <div class="row">` +
+    `<button class="btn ghost small" data-act="settings">${t('Settings')}` +
+    `</button>${themeBtn('btn ghost small')}${langBtn('btn ghost small')}` +
+    `<button class="btn ghost small" data-act="help">${t('Help')}</button>` +
+    `<button class="btn ghost small" data-act="stats">${L('Stats', 'Stats')}</button>` +
+    `<button class="btn ghost small" data-act="mute" aria-pressed="${!!PREF.muted}">${PREF.muted ? '🔇' : '🔊'} ${L('Sound', 'Son')}` +
+    `</button></div>\n  ` +
+    (has ? `<p class="small muted" style="margin:0">${Store.cloud ? '☁ ' : ''}${esc(V.autoInfo || '')}</p>` : '') +
+    `</div></div>`
+  );
 }
 function overScreen() {
   const last = S.log.slice(-3).reverse().map(logRow).join('');
-  return `<div class="app"><div class="over"><div class="brand">${t('Game over')}</div><h1>${L('You fell off everyone\'s radar.', 'Tu as disparu des radars.')}</h1><p class="muted">${t('Your popularity hit zero.')} ${fmtDate(E.dayOf(S).d)} · ${t('Day')} ${S.di + 1}</p>
-  <div class="row" style="justify-content:center"><button class="btn" data-act="readj">📖 ${t('Journal')}</button><button class="btn primary" data-act="newgame2">${t('Play again')}</button><button class="btn" data-act="saves0">${t('Load')}</button></div></div></div>`;
+  return (
+    `<div class="app"><div class="over"><div class="brand">${t('Game over')}</div><h1>` +
+    L("You fell off everyone's radar.", 'Tu as disparu des radars.') +
+    `</h1>` +
+    `<p class="muted">${t('Your popularity hit zero.')} ${fmtDate(E.dayOf(S).d)} · ${t('Day')} ${S.di + 1}` +
+    `</p>\n  <div class="row" style="justify-content:center">` +
+    `<button class="btn" data-act="readj">📖 ${t('Journal')}</button>` +
+    `<button class="btn primary" data-act="newgame2">${t('Play again')}</button>` +
+    `<button class="btn" data-act="saves0">${t('Load')}</button></div></div></div>`
+  );
 }
-const lineHtml = l => /^[^:]{1,40}: “/.test(l) ? `<p class="say">${esc(l)}</p>` : `<p>${esc(l)}</p>`;
+const lineHtml = l => (/^[^:]{1,40}: “/.test(l) ? `<p class="say">${esc(l)}</p>` : `<p>${esc(l)}</p>`);
 function endingScreen() {
-  const en = E.ENDBY[S.ending.id]; const x = E.stats(S);
+  const en = E.ENDBY[S.ending.id];
+  const x = E.stats(S);
   const epi = S.ending.epi.map(id => E.ENDBY[id]).filter(Boolean);
-  const top = E.metKids(S).slice().sort((a, b) => S.rel[b] - S.rel[a]).slice(0, 4);
-  return `<div class="app"><div class="over" style="text-align:left"><div class="brand">${t('Your ending')} · ${fmtDate(E.dayOf(S).d)}</div><h1 style="color:${en.bad ? 'var(--bad)' : 'var(--fg)'};margin:8px 0">${esc(en.n)}</h1>
-  <div class="end-quote">${esc(en.q)}</div>${en.body ? `<p>${esc(en.body)}</p>` : ''}<p class="muted"><i>Moral: ${esc(en.moral)}</i></p><p class="small">${inkHtml('k7', CLUES().k7)}</p>
-  ${epi.map(e => `<div class="card"><b>${esc(e.n)}</b><div class="end-quote" style="font-size:.95em">${esc(e.q)}</div><div class="small muted"><i>${esc(e.moral)}</i></div></div>`).join('')}
-  <div class="card"><h3>${t('Final stats')}</h3>${statBoxes()}
-  <p class="small muted" style="margin:10px 0 0">${top.map(n => esc(n.split(' ')[0]) + ' ' + signed(S.rel[n])).join(' · ')}</p></div>
-  <div class="row"><button class="btn primary" data-act="newgame2">${t('Play again')}</button><button class="btn" data-act="readj">📖 ${t('Journal')}</button><button class="btn" data-act="endbook">${t('Endings')}</button><button class="btn" data-act="summary">${L('Run summary', 'Résumé')}</button>${noteMcBtn()}${listenBtn()}<button class="btn ghost" data-act="saves0">${t('Load')}</button></div></div></div>`;
+  const top = E.metKids(S)
+    .slice()
+    .sort((a, b) => S.rel[b] - S.rel[a])
+    .slice(0, 4);
+  return (
+    `<div class="app"><div class="over" style="text-align:left">` +
+    `<div class="brand">${t('Your ending')} · ${fmtDate(E.dayOf(S).d)}</div>` +
+    `<h1 style="color:${en.bad ? 'var(--bad)' : 'var(--fg)'};margin:8px 0">${esc(en.n)}</h1>\n  ` +
+    `<div class="end-quote">${esc(en.q)}</div>` +
+    (en.body ? `<p>${esc(en.body)}</p>` : '') +
+    `<p class="muted"><i>Moral: ${esc(en.moral)}</i></p><p class="small">${inkHtml('k7', CLUES().k7)}` +
+    `</p>\n  ` +
+    epi
+      .map(
+        e =>
+          `<div class="card"><b>${esc(e.n)}</b><div class="end-quote" style="font-size:.95em">${esc(e.q)}</div>` +
+          `<div class="small muted"><i>${esc(e.moral)}</i></div></div>`,
+      )
+      .join('') +
+    `\n  <div class="card"><h3>${t('Final stats')}</h3>${statBoxes()}\n  ` +
+    `<p class="small muted" style="margin:10px 0 0">` +
+    top.map(n => esc(n.split(' ')[0]) + ' ' + signed(S.rel[n])).join(' · ') +
+    `</p></div>\n  <div class="row"><button class="btn primary" data-act="newgame2">${t('Play again')}` +
+    `</button><button class="btn" data-act="readj">📖 ${t('Journal')}</button>` +
+    `<button class="btn" data-act="endbook">${t('Endings')}</button>` +
+    `<button class="btn" data-act="summary">${L('Run summary', 'Résumé')}` +
+    `</button>${noteMcBtn()}${listenBtn()}<button class="btn ghost" data-act="saves0">${t('Load')}` +
+    `</button></div></div></div>`
+  );
 }
 
 /* ---------- dialogs: saved games, endings book ---------- */
