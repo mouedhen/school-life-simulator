@@ -3896,12 +3896,33 @@ async function showEndBook() {
 
 /* ---------- phone ---------- */
 /* button labels for one-to-one texting actions [EN, FR] */
-const PHL = { chat_school: ['Chat about school', 'Parler de l\'école'], chat_hobbies: ['Chat about hobbies', 'Parler de loisirs'], chat_daily: ['Chat about daily life', 'Parler du quotidien'], chat_rumor: ['Ask what they heard', 'Demander ce qu\'ils ont entendu'], compliment: ['Send a compliment', 'Envoyer un compliment'], message: ['Say hi', 'Dire salut'], askhelp: ['Ask for help', 'Demander de l\'aide'], advice: ['Ask for advice', 'Demander conseil'], cheer: ['Cheer them up', 'Remonter le moral'], tease: ['Send a joke', 'Envoyer une blague'], askmoney: ['Ask to borrow money', 'Demander de l\'argent'], lend: ['Offer to lend $5', 'Proposer de prêter 5 $'], apologize: ['Say sorry', 'Présenter des excuses'], boundary: ['Set a boundary', 'Poser une limite'] };
+const PHL = {
+  chat_school: ['Chat about school', "Parler de l'école"],
+  chat_hobbies: ['Chat about hobbies', 'Parler de loisirs'],
+  chat_daily: ['Chat about daily life', 'Parler du quotidien'],
+  chat_rumor: ['Ask what they heard', "Demander ce qu'ils ont entendu"],
+  compliment: ['Send a compliment', 'Envoyer un compliment'],
+  message: ['Say hi', 'Dire salut'],
+  askhelp: ['Ask for help', "Demander de l'aide"],
+  advice: ['Ask for advice', 'Demander conseil'],
+  cheer: ['Cheer them up', 'Remonter le moral'],
+  tease: ['Send a joke', 'Envoyer une blague'],
+  askmoney: ['Ask to borrow money', "Demander de l'argent"],
+  lend: ['Offer to lend $5', 'Proposer de prêter 5 $'],
+  apologize: ['Say sorry', 'Présenter des excuses'],
+  boundary: ['Set a boundary', 'Poser une limite'],
+};
 const unkOn = () => !!S && !S.over && S.di >= 3;
 const unkNew = () => unkOn() && !(S.phone && S.phone.unkSeen);
-const phUnread = () => { const un = (S && S.phone && S.phone.un) || {}; return Object.values(un).reduce((a, b) => a + b, 0) + (unkNew() ? 1 : 0); };
+const phUnread = () => {
+  const un = (S && S.phone && S.phone.un) || {};
+  return Object.values(un).reduce((a, b) => a + b, 0) + (unkNew() ? 1 : 0);
+};
 const phLeft = () => Math.max(0, E.PHONE_CAP - ((S.today && S.today.ph) || 0));
-function phBadge() { const n = phUnread(); return n ? `<span class="phbadge">${n}</span>` : ''; }
+function phBadge() {
+  const n = phUnread();
+  return n ? `<span class="phbadge">${n}</span>` : '';
+}
 
 /* ---------- phone minigames ---------- */
 const RF = [
