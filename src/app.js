@@ -250,16 +250,49 @@ const t = k => (LANG === 'fr' && FR[k]) || k;
 /* ---------- preferences: text size, reduced motion, sound, voice ---------- */
 FR['Music'] = 'Musique';
 const PREF = { ink: false, fs: 0, rm: null, snd: true, voice: true, mus: true, muted: false, vm: 80, vs: 80, vv: 90 };
-function applyVol() { try { if (SFX.g) SFX.g.gain.value = 0.55 * PREF.vs / 100; if (Music.master) Music.master.gain.value = PREF.vm / 100; } catch (e) {} }
-const RM_AUTO = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
-const RM_ON = () => PREF.rm == null ? RM_AUTO() : !!PREF.rm;
-function applyA11y() {
+function applyVol() {
   try {
-    const r = document.documentElement; r.classList.toggle('rm', RM_ON()); r.lang = L('en', 'fr-CA');
-    document.body.classList.toggle('inkvis', !!PREF.ink || !!V.revealed); document.body.classList.remove('fs1', 'fs2'); if (PREF.fs > 0) document.body.classList.add('fs' + PREF.fs);
+    if (SFX.g) SFX.g.gain.value = (0.55 * PREF.vs) / 100;
+    if (Music.master) Music.master.gain.value = PREF.vm / 100;
   } catch (e) {}
 }
-async function savePrefs() { try { const p = await Store.prefs(); Store.prefs(Object.assign({}, p, { ink: PREF.ink, fs: PREF.fs, rm: PREF.rm, snd: PREF.snd, voice: PREF.voice, mus: PREF.mus, muted: PREF.muted, vm: PREF.vm, vs: PREF.vs, vv: PREF.vv })); } catch (e) {} }
+const RM_AUTO = () => {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {
+    return false;
+  }
+};
+const RM_ON = () => (PREF.rm == null ? RM_AUTO() : !!PREF.rm);
+function applyA11y() {
+  try {
+    const r = document.documentElement;
+    r.classList.toggle('rm', RM_ON());
+    r.lang = L('en', 'fr-CA');
+    document.body.classList.toggle('inkvis', !!PREF.ink || !!V.revealed);
+    document.body.classList.remove('fs1', 'fs2');
+    if (PREF.fs > 0) document.body.classList.add('fs' + PREF.fs);
+  } catch (e) {}
+}
+async function savePrefs() {
+  try {
+    const p = await Store.prefs();
+    Store.prefs(
+      Object.assign({}, p, {
+        ink: PREF.ink,
+        fs: PREF.fs,
+        rm: PREF.rm,
+        snd: PREF.snd,
+        voice: PREF.voice,
+        mus: PREF.mus,
+        muted: PREF.muted,
+        vm: PREF.vm,
+        vs: PREF.vs,
+        vv: PREF.vv,
+      }),
+    );
+  } catch (e) {}
+}
 
 /* ---------- sound effects (SFX) ---------- */
 /* tiny WebAudio synth: no files, quiet, only after a click, and the player can turn it off */
