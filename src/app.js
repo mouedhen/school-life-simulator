@@ -297,46 +297,109 @@ async function savePrefs() {
 /* ---------- sound effects (SFX) ---------- */
 /* tiny WebAudio synth: no files, quiet, only after a click, and the player can turn it off */
 const SFX = {
-  c: null, g: null,
+  c: null,
+  g: null,
   ctx() {
     if (!PREF.snd || PREF.muted) return null;
     try {
-      if (!this.c) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; this.c = new AC(); this.g = this.c.createGain(); this.g.gain.value = 0.55 * PREF.vs / 100; this.g.connect(this.c.destination); }
+      if (!this.c) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        this.c = new AC();
+        this.g = this.c.createGain();
+        this.g.gain.value = (0.55 * PREF.vs) / 100;
+        this.g.connect(this.c.destination);
+      }
       if (this.c.state === 'suspended') this.c.resume();
       return this.c;
-    } catch (e) { return null; }
+    } catch (e) {
+      return null;
+    }
   },
   note(f, at, d, type, v) {
-    const c = this.ctx(); if (!c) return;
+    const c = this.ctx();
+    if (!c) return;
     try {
-      const o = c.createOscillator(), g = c.createGain(); const t0 = c.currentTime + (at || 0);
-      o.type = type || 'sine'; o.frequency.setValueAtTime(f, t0);
-      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(v || 0.12, t0 + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-      o.connect(g); g.connect(this.g); o.start(t0); o.stop(t0 + d + 0.05);
+      const o = c.createOscillator(),
+        g = c.createGain();
+      const t0 = c.currentTime + (at || 0);
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(f, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(v || 0.12, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+      o.connect(g);
+      g.connect(this.g);
+      o.start(t0);
+      o.stop(t0 + d + 0.05);
     } catch (e) {}
   },
   noise(at, d, f, v) {
-    const c = this.ctx(); if (!c) return;
+    const c = this.ctx();
+    if (!c) return;
     try {
-      const n = Math.floor(c.sampleRate * d), b = c.createBuffer(1, n, c.sampleRate), a = b.getChannelData(0);
+      const n = Math.floor(c.sampleRate * d),
+        b = c.createBuffer(1, n, c.sampleRate),
+        a = b.getChannelData(0);
       for (let i = 0; i < n; i++) a[i] = (Math.random() * 2 - 1) * (1 - i / n);
-      const s = c.createBufferSource(); s.buffer = b; const fl = c.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = f; fl.Q.value = 0.8;
-      const g = c.createGain(); g.gain.value = v || 0.1; s.connect(fl); fl.connect(g); g.connect(this.g); s.start(c.currentTime + (at || 0));
+      const s = c.createBufferSource();
+      s.buffer = b;
+      const fl = c.createBiquadFilter();
+      fl.type = 'bandpass';
+      fl.frequency.value = f;
+      fl.Q.value = 0.8;
+      const g = c.createGain();
+      g.gain.value = v || 0.1;
+      s.connect(fl);
+      fl.connect(g);
+      g.connect(this.g);
+      s.start(c.currentTime + (at || 0));
     } catch (e) {}
   },
-  tap() { this.note(660, 0, 0.05, 'triangle', 0.05); },
-  up() { this.note(523, 0, 0.12, 'sine', 0.1); this.note(784, 0.09, 0.2, 'sine', 0.1); },
-  down() { this.note(392, 0, 0.14, 'triangle', 0.09); this.note(294, 0.11, 0.26, 'triangle', 0.09); },
-  coin() { this.note(988, 0, 0.08, 'square', 0.04); this.note(1319, 0.07, 0.18, 'square', 0.04); },
-  page() { this.noise(0, 0.16, 1800, 0.07); },
-  chime() { [523, 659, 784, 1046].forEach((f, i) => this.note(f, i * 0.13, 0.5, 'sine', 0.08)); },
-  endGood() { [523, 659, 784, 1046, 1319].forEach((f, i) => this.note(f, i * 0.16, 0.9, 'sine', 0.09)); },
-  endBad() { [440, 349, 294, 220].forEach((f, i) => this.note(f, i * 0.28, 0.9, 'triangle', 0.09)); },
+  tap() {
+    this.note(660, 0, 0.05, 'triangle', 0.05);
+  },
+  up() {
+    this.note(523, 0, 0.12, 'sine', 0.1);
+    this.note(784, 0.09, 0.2, 'sine', 0.1);
+  },
+  down() {
+    this.note(392, 0, 0.14, 'triangle', 0.09);
+    this.note(294, 0.11, 0.26, 'triangle', 0.09);
+  },
+  coin() {
+    this.note(988, 0, 0.08, 'square', 0.04);
+    this.note(1319, 0.07, 0.18, 'square', 0.04);
+  },
+  page() {
+    this.noise(0, 0.16, 1800, 0.07);
+  },
+  chime() {
+    [523, 659, 784, 1046].forEach((f, i) => this.note(f, i * 0.13, 0.5, 'sine', 0.08));
+  },
+  endGood() {
+    [523, 659, 784, 1046, 1319].forEach((f, i) => this.note(f, i * 0.16, 0.9, 'sine', 0.09));
+  },
+  endBad() {
+    [440, 349, 294, 220].forEach((f, i) => this.note(f, i * 0.28, 0.9, 'triangle', 0.09));
+  },
   forRes(r) {
     if (!r || !r.chips) return this.tap();
-    let pos = 0, neg = 0, mon = 0;
-    r.chips.forEach(c => { if (c.k === 'flag' || c.k === 'ripple') return; if (c.v > 0) { pos++; if (c.k === 'money') mon++; } else if (c.v < 0) neg++; });
-    if (pos && !neg) (mon && pos === mon) ? this.coin() : this.up(); else if (neg && !pos) this.down(); else if (pos && neg) { this.up(); } else this.tap();
+    let pos = 0,
+      neg = 0,
+      mon = 0;
+    r.chips.forEach(c => {
+      if (c.k === 'flag' || c.k === 'ripple') return;
+      if (c.v > 0) {
+        pos++;
+        if (c.k === 'money') mon++;
+      } else if (c.v < 0) neg++;
+    });
+    if (pos && !neg) mon && pos === mon ? this.coin() : this.up();
+    else if (neg && !pos) this.down();
+    else if (pos && neg) {
+      this.up();
+    } else this.tap();
   },
 };
 
