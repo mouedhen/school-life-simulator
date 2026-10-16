@@ -63,10 +63,26 @@
 'use strict';
 
 /* ---------- helpers ---------- */
-const E = window.Engine, CH = E.CH, DAYS = E.DAYS;
+const E = window.Engine,
+  CH = E.CH,
+  DAYS = E.DAYS;
 const $ = s => document.querySelector(s);
-const myName = () => { try { return (S && S.name) || 'MC'; } catch (e) { return 'MC'; } };
-const tr = s => { try { I18N.setPlayer(myName()); if (window.__trace) window.__trace.push(String(s)); return I18N.tr(s); } catch (e) { return s; } };
+const myName = () => {
+  try {
+    return (S && S.name) || 'MC';
+  } catch (e) {
+    return 'MC';
+  }
+};
+const tr = s => {
+  try {
+    I18N.setPlayer(myName());
+    if (window.__trace) window.__trace.push(String(s));
+    return I18N.tr(s);
+  } catch (e) {
+    return s;
+  }
+};
 const HTML_ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const escHtml = s => s.replace(/[&<>"']/g, c => HTML_ESC[c]);
 // trMC: translate to the current language, then put the player's name where the text says "MC"
