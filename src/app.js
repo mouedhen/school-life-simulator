@@ -1044,8 +1044,8 @@ const closeRow = () =>
 const outcomeHtml = r =>
   `${chips(r.chips)}<div class="lines">` +
   r.lines.map(l => `<p>${esc(tr(l))}</p>`).join('') +
-  `</div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="close">OK` +
-  `</button></div>`;
+  (`</div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="close">OK` +
+    `</button></div>`);
 function toast(msg) {
   const d = document.createElement('div');
   d.className = 'toast';
