@@ -2372,23 +2372,137 @@ function avatar(name, size) {
 
 /* ---------- People tab ---------- */
 /* item icons (also used by the Shop, the bag and event gifts) */
-const ICON = { 'Notebook & pen set': '📓', 'Sticker pack': '⭐', 'Snack': '🍪', 'Fancy snack box': '🍱', 'Hair clips / accessory': '🎀', 'Bracelet': '📿', 'Sketchbook': '🎨', 'Used paperback': '📖', 'Board game': '🎲', 'Sports ball': '⚽', 'Headphones': '🎧', 'Phone charm': '🔑', 'Reusable water bottle': '🧴', 'Small plush': '🧸', 'Gift card': '💳', 'Craft kit': '✂️', 'Bicycle tune-up': '🚲', 'Movie ticket': '🎟️', 'Café drink': '☕', 'Mystery box': '🎁', 'Study guide': '📘', 'Flashcards': '🗂️', 'Calculator': '🧮', 'Tutoring session': '🧑‍🏫', 'Lucky charm': '🍀', 'Chocolate box': '🍫', 'Houseplant': '🪴', 'Comic book': '📚', 'Poster': '🖼️', 'Friendship bracelet kit': '🧵', 'Concert ticket': '🎫', 'Lunch voucher': '🥪', 'Sunglasses': '🕶️', 'Hoodie': '🧥', 'Stylish backpack': '🎒', 'Smartwatch': '⌚', 'Handmade gift': '💝', 'Cooking knife': '🔪', "Dad's toolbox": '🧰', "Riley's hidden card": '🃏', "Max's lucky controller": '🎮', "Oliver's varsity jacket": '🏀', "Sophie's planner": '📒', 'Club badge': '🏅', 'Lost-and-found scarf': '🧣', 'Charity wristband': '🎗️', 'Magnifying glass': '🔍', 'Friendship pin': '📌', 'Sorry card pack': '💌', 'Thank-you basket': '🧺', 'Holiday sweater': '🎄', 'Volunteer tee': '👕', 'Brave badge': '🛡️', 'Fancy pen': '🖋️', 'Pocket journal': '📔', 'Showcase apron': '🍳', 'Group photo frame': '📸' };
+const ICON = {
+  'Notebook & pen set': '📓',
+  'Sticker pack': '⭐',
+  'Snack': '🍪',
+  'Fancy snack box': '🍱',
+  'Hair clips / accessory': '🎀',
+  'Bracelet': '📿',
+  'Sketchbook': '🎨',
+  'Used paperback': '📖',
+  'Board game': '🎲',
+  'Sports ball': '⚽',
+  'Headphones': '🎧',
+  'Phone charm': '🔑',
+  'Reusable water bottle': '🧴',
+  'Small plush': '🧸',
+  'Gift card': '💳',
+  'Craft kit': '✂️',
+  'Bicycle tune-up': '🚲',
+  'Movie ticket': '🎟️',
+  'Café drink': '☕',
+  'Mystery box': '🎁',
+  'Study guide': '📘',
+  'Flashcards': '🗂️',
+  'Calculator': '🧮',
+  'Tutoring session': '🧑‍🏫',
+  'Lucky charm': '🍀',
+  'Chocolate box': '🍫',
+  'Houseplant': '🪴',
+  'Comic book': '📚',
+  'Poster': '🖼️',
+  'Friendship bracelet kit': '🧵',
+  'Concert ticket': '🎫',
+  'Lunch voucher': '🥪',
+  'Sunglasses': '🕶️',
+  'Hoodie': '🧥',
+  'Stylish backpack': '🎒',
+  'Smartwatch': '⌚',
+  'Handmade gift': '💝',
+  'Cooking knife': '🔪',
+  "Dad's toolbox": '🧰',
+  "Riley's hidden card": '🃏',
+  "Max's lucky controller": '🎮',
+  "Oliver's varsity jacket": '🏀',
+  "Sophie's planner": '📒',
+  'Club badge': '🏅',
+  'Lost-and-found scarf': '🧣',
+  'Charity wristband': '🎗️',
+  'Magnifying glass': '🔍',
+  'Friendship pin': '📌',
+  'Sorry card pack': '💌',
+  'Thank-you basket': '🧺',
+  'Holiday sweater': '🎄',
+  'Volunteer tee': '👕',
+  'Brave badge': '🛡️',
+  'Fancy pen': '🖋️',
+  'Pocket journal': '📔',
+  'Showcase apron': '🍳',
+  'Group photo frame': '📸',
+};
 const KIND_ICON = { gift: '🎁', cosmetic: '👕', perm: '⭐', use: '✨', booster: '🚀', prep: '📝' };
 const itemIcon = (n, kind) => ICON[n] || KIND_ICON[kind] || '🎁';
-const SORTS = [['def', 'Default', 'Défaut'], ['pop', 'Most popular', 'Plus populaires'], ['unpop', 'Least popular', 'Moins populaires'], ['best', 'Best relationship', 'Meilleure relation'], ['worst', 'Worst relationship', 'Pire relation']];
+const SORTS = [
+  ['def', 'Default', 'Défaut'],
+  ['pop', 'Most popular', 'Plus populaires'],
+  ['unpop', 'Least popular', 'Moins populaires'],
+  ['best', 'Best relationship', 'Meilleure relation'],
+  ['worst', 'Worst relationship', 'Pire relation'],
+];
 function viewPeople() {
-  const f = V.filter; const q = V.q.toLowerCase();
-  const metAll = D().chars.filter(c => E.isMet(S, c.n)); const unmet = D().chars.length - metAll.length;
-  let list = metAll.filter(c => (f === 'all' || (f === 'kid' && c.role === 'kid') || (f === 'fam' && c.role === 'fam') || (f === 'teach' && c.role === 'teach')) && (!q || c.n.toLowerCase().includes(q)));
+  const f = V.filter;
+  const q = V.q.toLowerCase();
+  const metAll = D().chars.filter(c => E.isMet(S, c.n));
+  const unmet = D().chars.length - metAll.length;
+  let list = metAll.filter(
+    c =>
+      (f === 'all' ||
+        (f === 'kid' && c.role === 'kid') ||
+        (f === 'fam' && c.role === 'fam') ||
+        (f === 'teach' && c.role === 'teach')) &&
+      (!q || c.n.toLowerCase().includes(q)),
+  );
   const byPop = dir => (a, b) => (a.pop == null) - (b.pop == null) || (a.pop == null ? 0 : dir * (b.pop - a.pop)); // family and teachers have no school popularity: they go last
-  if (V.sort === 'pop') list.sort(byPop(1)); else if (V.sort === 'unpop') list.sort(byPop(-1)); else if (V.sort === 'best') list.sort((a, b) => S.rel[b.n] - S.rel[a.n]); else if (V.sort === 'worst') list.sort((a, b) => S.rel[a.n] - S.rel[b.n]);
-  const seg = [['all', 'All'], ['kid', 'Classmates'], ['fam', 'Family'], ['teach', 'Teachers']].map(([k, n]) => `<button class="${f === k ? 'on' : ''}" data-act="filter" data-v="${k}">${t(n)}</button>`).join('');
-  return `<div class="seg">${seg}</div><input type="search" id="q" placeholder="${t('Search')}" value="${ea(V.q)}">
-  <div class="seg sortseg" aria-label="${L('Sort', 'Trier')}">${SORTS.map(([k, en, fr]) => `<button class="${V.sort === k ? 'on' : ''}" data-act="sort" data-v="${k}">${L(en, fr)}</button>`).join('')}</div>
-  <div class="card" style="padding:4px 12px">${list.map(c => {
-    const v = S.rel[c.n]; const lab = E.relLabel(v);
-    return `<button class="person" data-act="person" data-v="${ea(c.n)}">${avatar(c.n, 40)}<div class="pmid"><div class="nm">${esc(c.n)}</div><div class="pill ${lab}">${relT(lab)} · ${signed(v)}</div></div>${relBar(v)}</button>`;
-  }).join('')}${list.length ? '' : `<p class="muted small" style="padding:10px 0">${L('Nobody matches.', 'Personne ne correspond.')}</p>`}</div>${unmet > 0 ? `<p class="muted small" style="margin:10px 2px">👋 ${L('You know ' + metAll.length + ' of ' + D().chars.length + ' people. New faces show up as the days go by.', 'Tu connais ' + metAll.length + ' personnes sur ' + D().chars.length + '. De nouveaux visages arrivent au fil des jours.')}</p>` : ''}`;
+  if (V.sort === 'pop') list.sort(byPop(1));
+  else if (V.sort === 'unpop') list.sort(byPop(-1));
+  else if (V.sort === 'best') list.sort((a, b) => S.rel[b.n] - S.rel[a.n]);
+  else if (V.sort === 'worst') list.sort((a, b) => S.rel[a.n] - S.rel[b.n]);
+  const seg = [
+    ['all', 'All'],
+    ['kid', 'Classmates'],
+    ['fam', 'Family'],
+    ['teach', 'Teachers'],
+  ]
+    .map(([k, n]) => `<button class="${f === k ? 'on' : ''}" data-act="filter" data-v="${k}">${t(n)}</button>`)
+    .join('');
+  return (
+    `<div class="seg">${seg}</div>` +
+    `<input type="search" id="q" placeholder="${t('Search')}" value="${ea(V.q)}">\n  ` +
+    `<div class="seg sortseg" aria-label="${L('Sort', 'Trier')}">` +
+    SORTS.map(
+      ([k, en, fr]) =>
+        `<button class="${V.sort === k ? 'on' : ''}" data-act="sort" data-v="${k}">${L(en, fr)}</button>`,
+    ).join('') +
+    `</div>\n  <div class="card" style="padding:4px 12px">` +
+    list
+      .map(c => {
+        const v = S.rel[c.n];
+        const lab = E.relLabel(v);
+        return (
+          `<button class="person" data-act="person" data-v="${ea(c.n)}">${avatar(c.n, 40)}<div class="pmid">` +
+          `<div class="nm">${esc(c.n)}</div><div class="pill ${lab}">${relT(lab)} · ${signed(v)}</div>` +
+          `</div>${relBar(v)}</button>`
+        );
+      })
+      .join('') +
+    (list.length
+      ? ''
+      : `<p class="muted small" style="padding:10px 0">${L('Nobody matches.', 'Personne ne correspond.')}</p>`) +
+    `</div>` +
+    (unmet > 0
+      ? `<p class="muted small" style="margin:10px 2px">👋 ` +
+        L(
+          'You know ' + metAll.length + ' of ' + D().chars.length + ' people. New faces show up as the days go by.',
+          'Tu connais ' +
+            metAll.length +
+            ' personnes sur ' +
+            D().chars.length +
+            '. De nouveaux visages arrivent au fil des jours.',
+        ) +
+        `</p>`
+      : '')
+  );
 }
 const D = () => E.D;
 
