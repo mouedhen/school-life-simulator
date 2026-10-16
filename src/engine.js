@@ -1062,11 +1062,13 @@ function endDay(S) {
   advance(S);
   return { evening: false };
 }
+// birthdays in data.js are written "March 14"
+const MONTH_NUM = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
 function evening(S) {
   const d = dayOf(S); const next = DAYS[S.di + 1];
   if (!next) return null;
   // birthdays: any char whose birthday falls on the next school day or between
-  const bdKey = (b) => { const m = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 }; const [mo, dy] = b.split(' '); return [m[mo], +dy]; };
+  const bdKey = (b) => { const [mo, dy] = b.split(' '); return [MONTH_NUM[mo], +dy]; };
   const a = new Date(d.d + 'T12:00:00Z'), b2 = new Date(next.d + 'T12:00:00Z');
   for (const c of D.chars) {
     if (c.role === 'teach') continue;
