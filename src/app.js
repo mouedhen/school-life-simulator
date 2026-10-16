@@ -801,46 +801,141 @@ const IC = {
 
 /* ---------- storage / accounts ---------- */
 const Store = {
-  cloud: false, db: null, uid: null, busy: false, queue: null,
+  cloud: false,
+  db: null,
+  uid: null,
+  busy: false,
+  queue: null,
   async init() {
     try {
       if (typeof claude !== 'undefined' && claude.use) {
-        const db = await claude.use('db'); const user = await claude.use('user');
-        if (user) { try { this.me = await user.me(); } catch (e) {} }
-        if (db && user) { this.uid = await user.id(); if (this.uid) { this.db = db; this.cloud = true; } }
+        const db = await claude.use('db');
+        const user = await claude.use('user');
+        if (user) {
+          try {
+            this.me = await user.me();
+          } catch (e) {}
+        }
+        if (db && user) {
+          this.uid = await user.id();
+          if (this.uid) {
+            this.db = db;
+            this.cloud = true;
+          }
+        }
       }
     } catch (e) {}
   },
-  col() { return this.db.collection('data/users/' + this.uid); },
+  col() {
+    return this.db.collection('data/users/' + this.uid);
+  },
   lsKey: k => 'sls_save_' + k,
-  meta(S) { const d = E.dayOf(S); return { date: d.d, di: S.di, pop: S.pop, money: S.money, grade: S.grade, at: Date.now(), ending: S.ending ? S.ending.id : null, over: S.over || null }; },
+  meta(S) {
+    const d = E.dayOf(S);
+    return {
+      date: d.d,
+      di: S.di,
+      pop: S.pop,
+      money: S.money,
+      grade: S.grade,
+      at: Date.now(),
+      ending: S.ending ? S.ending.id : null,
+      over: S.over || null,
+    };
+  },
   async put(slot, S) {
-    const meta = this.meta(S); const json = JSON.stringify(S);
-    try { localStorage.setItem(this.lsKey(slot), JSON.stringify({ meta, json })); } catch (e) {}
-    if (this.cloud) { try { await this.col().doc('save_' + slot).set({ meta, json }); } catch (e) { this.cloudErr = true; } }
+    const meta = this.meta(S);
+    const json = JSON.stringify(S);
+    try {
+      localStorage.setItem(this.lsKey(slot), JSON.stringify({ meta, json }));
+    } catch (e) {}
+    if (this.cloud) {
+      try {
+        await this.col()
+          .doc('save_' + slot)
+          .set({ meta, json });
+      } catch (e) {
+        this.cloudErr = true;
+      }
+    }
     return meta;
   },
   async get(slot) {
-    if (this.cloud) { try { const s = await this.col().doc('save_' + slot).get(); if (s.exists) { const d = s.data(); return { meta: d.meta, S: JSON.parse(d.json) }; } } catch (e) {} }
-    try { const v = JSON.parse(localStorage.getItem(this.lsKey(slot))); if (v) return { meta: v.meta, S: JSON.parse(v.json) }; } catch (e) {}
+    if (this.cloud) {
+      try {
+        const s = await this.col()
+          .doc('save_' + slot)
+          .get();
+        if (s.exists) {
+          const d = s.data();
+          return { meta: d.meta, S: JSON.parse(d.json) };
+        }
+      } catch (e) {}
+    }
+    try {
+      const v = JSON.parse(localStorage.getItem(this.lsKey(slot)));
+      if (v) return { meta: v.meta, S: JSON.parse(v.json) };
+    } catch (e) {}
     return null;
   },
   async metas() {
     const out = {};
     for (const k of ['auto', 's1', 's2', 's3']) {
       let m = null;
-      if (this.cloud) { try { const s = await this.col().doc('save_' + k).get(); if (s.exists) m = s.data().meta; } catch (e) {} }
-      if (!m) { try { const v = JSON.parse(localStorage.getItem(this.lsKey(k))); if (v) m = v.meta; } catch (e) {} }
+      if (this.cloud) {
+        try {
+          const s = await this.col()
+            .doc('save_' + k)
+            .get();
+          if (s.exists) m = s.data().meta;
+        } catch (e) {}
+      }
+      if (!m) {
+        try {
+          const v = JSON.parse(localStorage.getItem(this.lsKey(k)));
+          if (v) m = v.meta;
+        } catch (e) {}
+      }
       out[k] = m;
     }
     return out;
   },
-  async del(slot) { try { localStorage.removeItem(this.lsKey(slot)); } catch (e) {} if (this.cloud) { try { await this.col().doc('save_' + slot).delete(); } catch (e) {} } },
+  async del(slot) {
+    try {
+      localStorage.removeItem(this.lsKey(slot));
+    } catch (e) {}
+    if (this.cloud) {
+      try {
+        await this.col()
+          .doc('save_' + slot)
+          .delete();
+      } catch (e) {}
+    }
+  },
   async prefs(set) {
-    if (set) { try { localStorage.setItem('sls_prefs', JSON.stringify(set)); } catch (e) {} if (this.cloud) { try { await this.col().doc('prefs').set(set); } catch (e) {} } return set; }
+    if (set) {
+      try {
+        localStorage.setItem('sls_prefs', JSON.stringify(set));
+      } catch (e) {}
+      if (this.cloud) {
+        try {
+          await this.col().doc('prefs').set(set);
+        } catch (e) {}
+      }
+      return set;
+    }
     let p = null;
-    if (this.cloud) { try { const s = await this.col().doc('prefs').get(); if (s.exists) p = s.data(); } catch (e) {} }
-    if (!p) { try { p = JSON.parse(localStorage.getItem('sls_prefs')); } catch (e) {} }
+    if (this.cloud) {
+      try {
+        const s = await this.col().doc('prefs').get();
+        if (s.exists) p = s.data();
+      } catch (e) {}
+    }
+    if (!p) {
+      try {
+        p = JSON.parse(localStorage.getItem('sls_prefs'));
+      } catch (e) {}
+    }
     return p || {};
   },
   autosave(S) {
@@ -848,7 +943,15 @@ const Store = {
     this.queue = S;
     if (this.busy) return;
     this.busy = true;
-    setTimeout(async () => { const q = this.queue; this.queue = null; try { await this.put('auto', q); } catch (e) {} this.busy = false; if (this.queue) this.autosave(this.queue); }, 800);
+    setTimeout(async () => {
+      const q = this.queue;
+      this.queue = null;
+      try {
+        await this.put('auto', q);
+      } catch (e) {}
+      this.busy = false;
+      if (this.queue) this.autosave(this.queue);
+    }, 800);
   },
 };
 
