@@ -1054,37 +1054,126 @@ function toast(msg) {
 }
 
 /* ---------- render shell ---------- */
-function fmtDate(iso) { const d = new Date(iso + 'T12:00:00Z'); return d.toLocaleDateString(L('en-CA', 'fr-CA'), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); }
+function fmtDate(iso) {
+  const d = new Date(iso + 'T12:00:00Z');
+  return d.toLocaleDateString(L('en-CA', 'fr-CA'), {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
 function hud() {
-  const d = E.dayOf(S); const low = S.pop <= 20;
-  const pips = Array.from({ length: Math.max(S.maxBlocks, S.blocks) }, (_, i) => `<span class="pip ${i < S.blocks ? '' : 'off'}"></span>`).join('');
-  return `<div class="hud"><div class="hud-top"><div><div class="date">${esc(fmtDate(d.d))}</div><div class="sub">${t('Day')} ${S.di + 1} ${t('of')} ${DAYS.length}</div></div>
-  <div class="hr"><button class="mute phbtn${E.phoneOff(S) ? ' off' : ''}" data-act="phone" aria-label="${L('Phone', 'Téléphone')}">📱${phBadge()}</button><button class="mute" data-act="mute" aria-pressed="${!!PREF.muted}" aria-label="${L('Mute all sound', 'Couper tout le son')}">${PREF.muted ? '🔇' : '🔊'}</button><div class="money">$${S.money}</div></div></div>
-  <div class="bars"><div class="bar"><div class="lab"><span>${t('POP')}</span><b>${S.pop}/100</b></div><div class="track"><div class="fill pop ${low ? 'low' : ''}" style="width:${S.pop}%"></div></div></div>
-  <div class="bar"><div class="lab"><span>${t('Grade')}</span><b>${S.grade}</b></div><div class="track"><div class="fill grade" style="width:${S.grade}%"></div></div></div><div></div></div>
-  ${S.phase === 'free' ? `<div class="blocks"><span>${t('Time blocks')}</span>${pips}</div>` : ''}</div>${low ? `<div class="warn" style="margin-top:10px">⚠ POP ${S.pop}. ${L('If it hits 0, the run is over.', 'Si elle tombe à 0, la partie est perdue.')}</div>` : ''}`;
+  const d = E.dayOf(S);
+  const low = S.pop <= 20;
+  const pips = Array.from(
+    { length: Math.max(S.maxBlocks, S.blocks) },
+    (_, i) => `<span class="pip ${i < S.blocks ? '' : 'off'}"></span>`,
+  ).join('');
+  return (
+    `<div class="hud"><div class="hud-top"><div><div class="date">${esc(fmtDate(d.d))}</div>` +
+    `<div class="sub">${t('Day')} ${S.di + 1} ${t('of')} ${DAYS.length}</div></div>\n  <div class="hr">` +
+    `<button class="mute phbtn${E.phoneOff(S) ? ' off' : ''}" data-act="phone" aria-label="${L('Phone', 'Téléphone')}">📱${phBadge()}` +
+    `</button>` +
+    `<button class="mute" data-act="mute" aria-pressed="${!!PREF.muted}"` +
+    ` aria-label="${L('Mute all sound', 'Couper tout le son')}">${PREF.muted ? '🔇' : '🔊'}</button>` +
+    `<div class="money">$${S.money}</div></div></div>\n  <div class="bars"><div class="bar">` +
+    `<div class="lab"><span>${t('POP')}</span><b>${S.pop}/100</b></div><div class="track">` +
+    `<div class="fill pop ${low ? 'low' : ''}" style="width:${S.pop}%"></div></div></div>\n  ` +
+    `<div class="bar"><div class="lab"><span>${t('Grade')}</span><b>${S.grade}</b></div>` +
+    `<div class="track"><div class="fill grade" style="width:${S.grade}%"></div></div></div><div></div>` +
+    `</div>\n  ` +
+    (S.phase === 'free' ? `<div class="blocks"><span>${t('Time blocks')}</span>${pips}</div>` : '') +
+    `</div>` +
+    (low
+      ? `<div class="warn" style="margin-top:10px">⚠ POP ${S.pop}. ` +
+        L('If it hits 0, the run is over.', 'Si elle tombe à 0, la partie est perdue.') +
+        `</div>`
+      : '')
+  );
 }
 function nav() {
-  const tabs = [['today', 'Today', IC.today], ['people', 'People', IC.people], ['shop', 'Shop', IC.shop], ['work', 'Work', IC.work], ['cal', 'Calendar', IC.cal], ['journal', 'Journal', IC.journal], ['menu', 'Menu', IC.menu]];
-  return `<div class="nav"><div class="nav-in">${tabs.map(([k, n, ic]) => `<button data-act="tab" data-v="${k}" class="${V.tab === k ? 'on' : ''}"><svg viewBox="0 0 24 24">${ic}</svg>${t(n)}</button>`).join('')}</div></div>`;
+  const tabs = [
+    ['today', 'Today', IC.today],
+    ['people', 'People', IC.people],
+    ['shop', 'Shop', IC.shop],
+    ['work', 'Work', IC.work],
+    ['cal', 'Calendar', IC.cal],
+    ['journal', 'Journal', IC.journal],
+    ['menu', 'Menu', IC.menu],
+  ];
+  return (
+    `<div class="nav"><div class="nav-in">` +
+    tabs
+      .map(
+        ([k, n, ic]) =>
+          `<button data-act="tab" data-v="${k}" class="${V.tab === k ? 'on' : ''}">` +
+          `<svg viewBox="0 0 24 24">${ic}</svg>${t(n)}</button>`,
+      )
+      .join('') +
+    `</div></div>`
+  );
 }
 function render() {
   metaSync();
   Music.set(musMood());
-  if (S && S.phone && S.phone.ping) { const pk0 = String(S.phone.ping); const pg = GCN[pk0] ? LX(GCN[pk0]) : pk0.split(' ')[0]; S.phone.ping = null; setTimeout(() => toast(L('📱 New message from ', '📱 Nouveau message de ') + pg), 500); }
-  if (S && S.notice) { const nt = S.notice; S.notice = ''; setTimeout(() => toast(nt), 400); }
+  if (S && S.phone && S.phone.ping) {
+    const pk0 = String(S.phone.ping);
+    const pg = GCN[pk0] ? LX(GCN[pk0]) : pk0.split(' ')[0];
+    S.phone.ping = null;
+    setTimeout(() => toast(L('📱 New message from ', '📱 Nouveau message de ') + pg), 500);
+  }
+  if (S && S.notice) {
+    const nt = S.notice;
+    S.notice = '';
+    setTimeout(() => toast(nt), 400);
+  }
   const root = $('#root');
-  if (S && S.over && !V.overDone) { V.overDone = true; Store.del('auto'); recordRun(); }
+  if (S && S.over && !V.overDone) {
+    V.overDone = true;
+    Store.del('auto');
+    recordRun();
+  }
   applyA11y();
-  if (!S) { root.innerHTML = V.gate ? loginScreen() : titleScreen(); return; }
-  { const k = S.ending ? 'e' + S.ending.id : S.over ? 'o' : ''; if (k && V.sfxKey !== k) { V.sfxKey = k; (S.ending && !E.ENDBY[S.ending.id].bad) ? SFX.endGood() : SFX.endBad(); if (S.ending) setTimeout(() => Voice.say(endParts()), 900); } else if (!k) V.sfxKey = ''; }
-  if (V.jFinal && S && (S.over || S.phase === 'ending')) { root.innerHTML = `<div class="app"><main>${viewJournal()}</main></div>`; jUpdateNav(); jFit($('#spread')); return; }
+  if (!S) {
+    root.innerHTML = V.gate ? loginScreen() : titleScreen();
+    return;
+  }
+  {
+    const k = S.ending ? 'e' + S.ending.id : S.over ? 'o' : '';
+    if (k && V.sfxKey !== k) {
+      V.sfxKey = k;
+      S.ending && !E.ENDBY[S.ending.id].bad ? SFX.endGood() : SFX.endBad();
+      if (S.ending) setTimeout(() => Voice.say(endParts()), 900);
+    } else if (!k) V.sfxKey = '';
+  }
+  if (V.jFinal && S && (S.over || S.phase === 'ending')) {
+    root.innerHTML = `<div class="app"><main>${viewJournal()}</main></div>`;
+    jUpdateNav();
+    jFit($('#spread'));
+    return;
+  }
   let body = '';
   if (S.over) body = overScreen();
   else if (S.phase === 'ending') body = endingScreen();
-  else body = ({ today: viewToday, people: viewPeople, shop: viewShop, work: viewWork, cal: viewCal, journal: viewJournal, menu: viewMenu })[V.tab]();
-  root.innerHTML = `<div class="app">${S.over || S.phase === 'ending' ? '' : hud()}<main>${body}</main></div>${S.over || S.phase === 'ending' ? '' : nav()}`;
-  if (V.tab === 'journal' && !(S.over || S.phase === 'ending')) { jUpdateNav(); jFit($('#spread')); }
+  else
+    body = {
+      today: viewToday,
+      people: viewPeople,
+      shop: viewShop,
+      work: viewWork,
+      cal: viewCal,
+      journal: viewJournal,
+      menu: viewMenu,
+    }[V.tab]();
+  root.innerHTML =
+    `<div class="app">${S.over || S.phase === 'ending' ? '' : hud()}<main>${body}</main>` +
+    `</div>${S.over || S.phase === 'ending' ? '' : nav()}`;
+  if (V.tab === 'journal' && !(S.over || S.phase === 'ending')) {
+    jUpdateNav();
+    jFit($('#spread'));
+  }
   renderModal();
 }
 
