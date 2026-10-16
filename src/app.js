@@ -3839,19 +3839,60 @@ async function showSaves(fromTitle) {
   const m = await Store.metas();
   const row = (k, label) => {
     const x = m[k];
-    return `<div class="slot"><div><b>${label}</b><div class="small muted">${x ? `${fmtDate(x.date)} · POP ${x.pop} · $${x.money} · ${t('Grade')} ${x.grade}${x.over ? ' · ' + t('Game over') : ''}${x.ending ? ' · ' + esc(E.ENDBY[x.ending].n) : ''}` : t('Empty slot')}</div></div><div class="row">${!fromTitle && k !== 'auto' && S && !S.over && S.phase !== 'ending' ? `<button class="btn small" data-act="saveto" data-v="${k}">${t('Save')}</button>` : ''}${x ? `<button class="btn small" data-act="loadfrom" data-v="${k}">${t('Load')}</button><button class="btn small ghost" data-act="delslot" data-v="${k}">✕</button>` : ''}</div></div>`;
+    return (
+      `<div class="slot"><div><b>${label}</b><div class="small muted">` +
+      (x
+        ? `${fmtDate(x.date)} · POP ${x.pop} · $${x.money} · ${t('Grade')} ${x.grade}${x.over ? ' · ' + t('Game over') : ''}` +
+          `${x.ending ? ' · ' + esc(E.ENDBY[x.ending].n) : ''}`
+        : t('Empty slot')) +
+      `</div></div><div class="row">` +
+      (!fromTitle && k !== 'auto' && S && !S.over && S.phase !== 'ending'
+        ? `<button class="btn small" data-act="saveto" data-v="${k}">${t('Save')}</button>`
+        : '') +
+      (x
+        ? `<button class="btn small" data-act="loadfrom" data-v="${k}">${t('Load')}</button>` +
+          `<button class="btn small ghost" data-act="delslot" data-v="${k}">✕</button>`
+        : '') +
+      `</div></div>`
+    );
   };
-  const acc = Store.cloud ? '☁ ' + L('Saved to your Claude account', 'Liées à ton compte Claude') : L('On this device only', 'Sur cet appareil');
+  const acc = Store.cloud
+    ? '☁ ' + L('Saved to your Claude account', 'Liées à ton compte Claude')
+    : L('On this device only', 'Sur cet appareil');
   V.savesOpen = true;
-  openModal(head(t('Saved games'), `<span class="tag alt">${acc}</span>`) + row('auto', t('Autosave')) + row('s1', 'Slot 1') + row('s2', 'Slot 2') + row('s3', 'Slot 3'));
+  openModal(
+    head(t('Saved games'), `<span class="tag alt">${acc}</span>`) +
+      row('auto', t('Autosave')) +
+      row('s1', 'Slot 1') +
+      row('s2', 'Slot 2') +
+      row('s3', 'Slot 3'),
+  );
 }
 async function showEndBook() {
-  const p = await Store.prefs(); const seen = new Set((p.seen || []).concat(V.seen || []));
-  const row = e => { const on = seen.has(e.id); return `<div class="endrow"><span class="dot ${on ? 'on' : ''}"></span><div><b${on && e.bad ? ' style="color:var(--bad)"' : ''}>${on ? esc(e.n) : '???'}</b><div class="small muted">${on ? esc(e.q) : esc(e.hint)}</div>${on ? `<div class="small muted"><i>${esc(e.moral)}</i></div>` : ''}</div></div>`; };
-  const good = E.ENDINGS.filter(e => !e.bad), bad = E.ENDINGS.filter(e => e.bad); const n = l => l.filter(e => seen.has(e.id)).length;
-  openModal(head(t('Endings'), '') + `<p class="muted small">${seen.size}/${E.ENDINGS.length} ${t('unlocked')}</p><h3 style="margin:10px 0 0">${t('Good endings')} · ${n(good)}/${good.length}</h3>${good.map(row).join('')}<h3 style="margin:14px 0 0">${t('Hard endings')} · ${n(bad)}/${bad.length}</h3>${bad.map(row).join('')}`);
+  const p = await Store.prefs();
+  const seen = new Set((p.seen || []).concat(V.seen || []));
+  const row = e => {
+    const on = seen.has(e.id);
+    return (
+      `<div class="endrow"><span class="dot ${on ? 'on' : ''}"></span><div>` +
+      `<b${on && e.bad ? ' style="color:var(--bad)"' : ''}>${on ? esc(e.n) : '???'}</b>` +
+      `<div class="small muted">${on ? esc(e.q) : esc(e.hint)}</div>` +
+      (on ? `<div class="small muted"><i>${esc(e.moral)}</i></div>` : '') +
+      `</div></div>`
+    );
+  };
+  const good = E.ENDINGS.filter(e => !e.bad),
+    bad = E.ENDINGS.filter(e => e.bad);
+  const n = l => l.filter(e => seen.has(e.id)).length;
+  openModal(
+    head(t('Endings'), '') +
+      (`<p class="muted small">${seen.size}/${E.ENDINGS.length} ${t('unlocked')}</p>` +
+        `<h3 style="margin:10px 0 0">${t('Good endings')} · ${n(good)}/${good.length}` +
+        `</h3>${good.map(row).join('')}` +
+        `<h3 style="margin:14px 0 0">${t('Hard endings')} · ${n(bad)}/${bad.length}` +
+        `</h3>${bad.map(row).join('')}`),
+  );
 }
-
 
 /* ---------- phone ---------- */
 /* button labels for one-to-one texting actions [EN, FR] */
