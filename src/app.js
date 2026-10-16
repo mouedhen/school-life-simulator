@@ -657,51 +657,135 @@ document.addEventListener(
 /* ---------- voice ---------- */
 /* browser text-to-speech for a few scenes (the Ball, the big school moments, the endings); synthetic voices, not recordings */
 const Voice = {
-  ok() { try { return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); } catch (e) { return false; } },
-  vs() { try { return window.speechSynthesis.getVoices() || []; } catch (e) { return []; } },
+  ok() {
+    try {
+      return !!(window.speechSynthesis && window.SpeechSynthesisUtterance);
+    } catch (e) {
+      return false;
+    }
+  },
+  vs() {
+    try {
+      return window.speechSynthesis.getVoices() || [];
+    } catch (e) {
+      return [];
+    }
+  },
   gender(who) {
-    const w = String(who || '').trim(); if (!w) return null;
-    const c = Object.keys(CH).find(n => n === w || n.split(' ')[0] === w.split(' ')[0] || n.replace(/^(Ms|Mr)\.\s*/, '').split(' ')[0] === w.replace(/^(Ms|Mr)\.\s*/, '').split(' ')[0]);
-    if (c) return CH[c].g; if (/^(Mom|Maman|Ms\.|Mme)/.test(w)) return 'F'; if (/^(Dad|Papa|Mr\.|M\.)/.test(w)) return 'M'; return null;
+    const w = String(who || '').trim();
+    if (!w) return null;
+    const c = Object.keys(CH).find(
+      n =>
+        n === w ||
+        n.split(' ')[0] === w.split(' ')[0] ||
+        n.replace(/^(Ms|Mr)\.\s*/, '').split(' ')[0] === w.replace(/^(Ms|Mr)\.\s*/, '').split(' ')[0],
+    );
+    if (c) return CH[c].g;
+    if (/^(Mom|Maman|Ms\.|Mme)/.test(w)) return 'F';
+    if (/^(Dad|Papa|Mr\.|M\.)/.test(w)) return 'M';
+    return null;
   },
   voiceFor(who, g) {
-    const lang = L('en', 'fr'); const all = this.vs().filter(v => v.lang && v.lang.toLowerCase().replace('_', '-').startsWith(lang));
+    const lang = L('en', 'fr');
+    const all = this.vs().filter(v => v.lang && v.lang.toLowerCase().replace('_', '-').startsWith(lang));
     if (!all.length) return null;
-    const fem = /female|woman|zira|samantha|susan|hazel|aria|jenny|julie|hortense|amelie|amélie|denise|karen|moira|tessa|victoria|siri.*female|google.*(uk english female|français)/i, mal = /\bmale\b|\bman\b|david|mark|daniel|george|thomas|paul|guy|fred|alex|google uk english male|henri/i;
-    const pool = g === 'F' ? all.filter(v => fem.test(v.name) && !/\bmale\b/i.test(v.name)) : g === 'M' ? all.filter(v => mal.test(v.name)) : [];
-    const list = pool.length ? pool : all; let h = 0; String(who || 'n').split('').forEach(ch => { h = (h * 31 + ch.charCodeAt(0)) >>> 0; });
+    const fem =
+        /female|woman|zira|samantha|susan|hazel|aria|jenny|julie|hortense|amelie|amélie|denise|karen|moira|tessa|victoria|siri.*female|google.*(uk english female|français)/i,
+      mal = /\bmale\b|\bman\b|david|mark|daniel|george|thomas|paul|guy|fred|alex|google uk english male|henri/i;
+    const pool =
+      g === 'F'
+        ? all.filter(v => fem.test(v.name) && !/\bmale\b/i.test(v.name))
+        : g === 'M'
+          ? all.filter(v => mal.test(v.name))
+          : [];
+    const list = pool.length ? pool : all;
+    let h = 0;
+    String(who || 'n')
+      .split('')
+      .forEach(ch => {
+        h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      });
     return list[h % list.length];
   },
-  plain(s) { return trMC(s).replace(/ /g, ' '); },
+  plain(s) {
+    return trMC(s).replace(/ /g, ' ');
+  },
   parts(text, narrator) {
-    const out = []; const src = this.plain(text); const re = /(?:((?:Ms\.|Mr\.|Mme|M\.)\s[\p{L}'’ -]{1,24}|\p{Lu}[\p{L}'’ -]{0,28}):\s*)?[“«"]\s*([^”»"]+?)\s*[”»"]/gu; let last = 0, m, who = null;
+    const out = [];
+    const src = this.plain(text);
+    const re =
+      /(?:((?:Ms\.|Mr\.|Mme|M\.)\s[\p{L}'’ -]{1,24}|\p{Lu}[\p{L}'’ -]{0,28}):\s*)?[“«"]\s*([^”»"]+?)\s*[”»"]/gu;
+    let last = 0,
+      m,
+      who = null;
     while ((m = re.exec(src))) {
-      const pre = src.slice(last, m.index).trim(); if (pre) out.push({ t: pre, who: null });
-      who = m[1] ? m[1].trim() : who; out.push({ t: m[2], who: who || 'x' }); last = m.index + m[0].length;
+      const pre = src.slice(last, m.index).trim();
+      if (pre) out.push({ t: pre, who: null });
+      who = m[1] ? m[1].trim() : who;
+      out.push({ t: m[2], who: who || 'x' });
+      last = m.index + m[0].length;
     }
-    const tail = src.slice(last).trim(); if (tail) out.push({ t: tail, who: null });
+    const tail = src.slice(last).trim();
+    if (tail) out.push({ t: tail, who: null });
     return out;
   },
   say(parts) {
-    if (!PREF.voice || PREF.muted || !this.ok()) return; this.stop();
+    if (!PREF.voice || PREF.muted || !this.ok()) return;
+    this.stop();
     try {
       parts.forEach(pt => {
-        if (!pt.t) return; const u = new SpeechSynthesisUtterance(pt.t); u.lang = L('en-US', 'fr-CA');
-        let h = 0; String(pt.who || 'n').split('').forEach(ch => { h = (h * 17 + ch.charCodeAt(0)) >>> 0; });
-        if (pt.who) { const g = this.gender(pt.who); const v = this.voiceFor(pt.who, g); if (v) u.voice = v; u.pitch = g === 'F' ? 1.12 + (h % 20) / 100 : g === 'M' ? 0.78 + (h % 20) / 100 : 0.95 + (h % 25) / 100; u.rate = 0.96 + (h % 9) / 100; }
-        else { const v = this.voiceFor('narrator', null); if (v) u.voice = v; u.pitch = 0.92; u.rate = 0.94; }
-        u.volume = 0.9 * PREF.vv / 100; window.speechSynthesis.speak(u);
+        if (!pt.t) return;
+        const u = new SpeechSynthesisUtterance(pt.t);
+        u.lang = L('en-US', 'fr-CA');
+        let h = 0;
+        String(pt.who || 'n')
+          .split('')
+          .forEach(ch => {
+            h = (h * 17 + ch.charCodeAt(0)) >>> 0;
+          });
+        if (pt.who) {
+          const g = this.gender(pt.who);
+          const v = this.voiceFor(pt.who, g);
+          if (v) u.voice = v;
+          u.pitch = g === 'F' ? 1.12 + (h % 20) / 100 : g === 'M' ? 0.78 + (h % 20) / 100 : 0.95 + (h % 25) / 100;
+          u.rate = 0.96 + (h % 9) / 100;
+        } else {
+          const v = this.voiceFor('narrator', null);
+          if (v) u.voice = v;
+          u.pitch = 0.92;
+          u.rate = 0.94;
+        }
+        u.volume = (0.9 * PREF.vv) / 100;
+        window.speechSynthesis.speak(u);
       });
       V.speaking = true;
     } catch (e) {}
   },
-  stop() { try { if (this.ok()) window.speechSynthesis.cancel(); } catch (e) {} V.speaking = false; },
+  stop() {
+    try {
+      if (this.ok()) window.speechSynthesis.cancel();
+    } catch (e) {}
+    V.speaking = false;
+  },
 };
 const isVoiced = ev => !!ev && (ev.kind === 'ball' || ev.kind === 'special');
-const evParts = ev => { let a = Voice.parts(ev.title).map(x => x); a = [{ t: Voice.plain(ev.title) + '.', who: null }].concat(Voice.parts(ev.desc)); return a; };
+const evParts = ev => {
+  let a = Voice.parts(ev.title).map(x => x);
+  a = [{ t: Voice.plain(ev.title) + '.', who: null }].concat(Voice.parts(ev.desc));
+  return a;
+};
 const resParts = (ev, r) => [].concat(...(r.lines || []).map(l => Voice.parts(l)));
-const endParts = () => { const en = E.ENDBY[S.ending.id]; return [{ t: Voice.plain(en.n) + '.', who: null }].concat(Voice.parts('“' + en.q.replace(/[“”]/g, '') + '”')).concat(en.body ? Voice.parts(en.body) : []).concat(Voice.parts(en.moral ? L('Moral: ', 'Morale : ') + en.moral : '')); };
-const listenBtn = () => (PREF.voice && Voice.ok()) ? `<button class="btn ghost small" data-act="listen" aria-label="${t('Listen')}">🔊 ${t('Listen')}</button>` : '';
+const endParts = () => {
+  const en = E.ENDBY[S.ending.id];
+  return [{ t: Voice.plain(en.n) + '.', who: null }]
+    .concat(Voice.parts('“' + en.q.replace(/[“”]/g, '') + '”'))
+    .concat(en.body ? Voice.parts(en.body) : [])
+    .concat(Voice.parts(en.moral ? L('Moral: ', 'Morale : ') + en.moral : ''));
+};
+const listenBtn = () =>
+  PREF.voice && Voice.ok()
+    ? `<button class="btn ghost small" data-act="listen" aria-label="${t('Listen')}">🔊 ${t('Listen')}` + `</button>`
+    : '';
 
 /* ---------- icons ---------- */
 const IC = {
