@@ -67,8 +67,13 @@ const E = window.Engine, CH = E.CH, DAYS = E.DAYS;
 const $ = s => document.querySelector(s);
 const myName = () => { try { return (S && S.name) || 'MC'; } catch (e) { return 'MC'; } };
 const tr = s => { try { I18N.setPlayer(myName()); if (window.__trace) window.__trace.push(String(s)); return I18N.tr(s); } catch (e) { return s; } };
-const ea = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const esc = s => tr(String(s == null ? '' : s)).replace(/\bMC\b/g, () => myName()).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const HTML_ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const escHtml = s => s.replace(/[&<>"']/g, c => HTML_ESC[c]);
+// trMC: translate to the current language, then put the player's name where the text says "MC"
+const trMC = s => tr(String(s == null ? '' : s)).replace(/\bMC\b/g, () => myName());
+// ea: escape only (attributes, names, raw values). esc: trMC, then escape (any English sentence shown to the player)
+const ea = s => escHtml(String(s == null ? '' : s));
+const esc = s => escHtml(trMC(s));
 
 /* ---------- i18n: UI table + sentence-level FR layer (i18n.js, fr.js) ---------- */
 const FR = {
@@ -97,6 +102,7 @@ const FR = {
   'Talk about someone': 'Parler de quelqu\'un', 'Share a secret': 'Partager un secret', 'Ask for advice': 'Demander conseil', 'Sit together at lunch': 'Manger ensemble', 'Send a message': 'Envoyer un message', 'Tease playfully': 'Taquiner', 'Cheer them up': 'Remonter le moral', 'Work on a project together': 'Projet en équipe', 'Ask to join their group': 'Rejoindre leur groupe',
 };
 const L = (en, fr) => (typeof LANG !== 'undefined' && LANG === 'fr') ? fr : en;
+const LX = p => LANG === 'fr' ? p[1] : p[0]; // same as L() for an [en, fr] pair
 let LANG = 'en'; let THEME = 'system'; window.__LANG = () => LANG;
 function applyTheme() { try { const r = document.documentElement; if (THEME === 'system') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', THEME); } catch (e) {} }
 const THEME_L = () => ({ system: LANG === 'fr' ? 'Auto' : 'Auto', light: LANG === 'fr' ? 'Clair' : 'Light', dark: LANG === 'fr' ? 'Sombre' : 'Dark' })[THEME];
@@ -269,7 +275,7 @@ const Voice = {
     const list = pool.length ? pool : all; let h = 0; String(who || 'n').split('').forEach(ch => { h = (h * 31 + ch.charCodeAt(0)) >>> 0; });
     return list[h % list.length];
   },
-  plain(s) { return tr(String(s == null ? '' : s)).replace(/\bMC\b/g, () => myName()).replace(/ /g, ' '); },
+  plain(s) { return trMC(s).replace(/ /g, ' '); },
   parts(text, narrator) {
     const out = []; const src = this.plain(text); const re = /(?:((?:Ms\.|Mr\.|Mme|M\.)\s[\p{L}'’ -]{1,24}|\p{Lu}[\p{L}'’ -]{0,28}):\s*)?[“«"]\s*([^”»"]+?)\s*[”»"]/gu; let last = 0, m, who = null;
     while ((m = re.exec(src))) {
@@ -387,11 +393,11 @@ let S = null; const V = { tab: 'today', modal: null, filter: 'all', sort: 'def',
 function pretty(f) { return String(f).toLowerCase().replace(/_/g, ' '); }
 function chipHtml(c) {
   switch (c.k) {
-    case 'pop': return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">POP ${c.v > 0 ? '+' : ''}${c.v}</span>`;
-    case 'grade': return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">${t('Grade')} ${c.v > 0 ? '+' : ''}${c.v}</span>`;
+    case 'pop': return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">POP ${signed(c.v)}</span>`;
+    case 'grade': return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">${t('Grade')} ${signed(c.v)}</span>`;
     case 'money': return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">$${c.v > 0 ? '+' : '−'}${Math.abs(c.v)}</span>`;
-    case 'rel': return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">${esc(c.n.split(' ')[0] === 'Ms.' || c.n.split(' ')[0] === 'Mr.' ? c.n : c.n.split(' ')[0])} ${c.v > 0 ? '+' : ''}${c.v}</span>`;
-    case 'ripple': return `<span class="chip rip">${esc(c.n.split(' ')[0])} ${c.v > 0 ? '+' : ''}${c.v}</span>`;
+    case 'rel': return `<span class="chip ${c.v > 0 ? 'up' : 'down'}">${esc(c.n.split(' ')[0] === 'Ms.' || c.n.split(' ')[0] === 'Mr.' ? c.n : c.n.split(' ')[0])} ${signed(c.v)}</span>`;
+    case 'ripple': return `<span class="chip rip">${esc(c.n.split(' ')[0])} ${signed(c.v)}</span>`;
     case 'gossip': return `<span class="chip down">Gossip +${c.v}</span>`;
     case 'flag': return `<span class="chip flag">★ ${esc(pretty(c.n))}</span>`;
     case 'unlock': return `<span class="chip flag">🔓 ${LANG === 'fr' ? 'Boutique' : 'Shop'}: ${esc(tr(c.n))}</span>`;
@@ -403,6 +409,15 @@ function chips(arr, max) {
   const main = arr.filter(c => c.k !== 'ripple'); const rip = arr.filter(c => c.k === 'ripple').slice(0, 3);
   return `<div class="chips">${main.concat(max ? [] : rip).map(chipHtml).join('')}</div>`;
 }
+/* small pieces of UI used on several screens */
+const signed = v => (v > 0 ? '+' : '') + v; // "+5", "0", "-3"
+const statBoxes = () => `<div class="stats3"><div><b>${S.pop}</b>POP</div><div><b>${S.grade}</b>${t('Grade')}</div><div><b>$${S.money}</b>${t('Money')}</div></div>`;
+const themeBtn = cls => `<button class="${cls}" data-act="theme">Mode: ${THEME_L()}</button>`;
+const langBtn = cls => `<button class="${cls}" data-act="lang">${t('Language')}: ${L('English', 'Français')}</button>`;
+const noteMcBtn = () => V.revealed ? `<button class="btn" data-act="notemc">${L('Note for MC', 'Mot pour MC')}</button>` : '';
+const closeRow = () => `<div class="row" style="margin-top:12px"><button class="btn ghost" data-act="close">${t('Close')}</button></div>`;
+// lines + chips of an action's result, with an OK button (family time, cooking)
+const outcomeHtml = r => `${chips(r.chips)}<div class="lines">${r.lines.map(l => `<p>${esc(tr(l))}</p>`).join('')}</div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="close">OK</button></div>`;
 function toast(msg) { const d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = tr(msg); document.body.appendChild(d); setTimeout(() => d.remove(), 2200); }
 
 /* ---------- render shell ---------- */
@@ -830,10 +845,10 @@ function viewPeople() {
   if (V.sort === 'pop') list.sort(byPop(1)); else if (V.sort === 'unpop') list.sort(byPop(-1)); else if (V.sort === 'best') list.sort((a, b) => S.rel[b.n] - S.rel[a.n]); else if (V.sort === 'worst') list.sort((a, b) => S.rel[a.n] - S.rel[b.n]);
   const seg = [['all', 'All'], ['kid', 'Classmates'], ['fam', 'Family'], ['teach', 'Teachers']].map(([k, n]) => `<button class="${f === k ? 'on' : ''}" data-act="filter" data-v="${k}">${t(n)}</button>`).join('');
   return `<div class="seg">${seg}</div><input type="search" id="q" placeholder="${t('Search')}" value="${ea(V.q)}">
-  <div class="seg sortseg" aria-label="${L('Sort', 'Trier')}">${SORTS.map(([k, en, fr]) => `<button class="${V.sort === k ? 'on' : ''}" data-act="sort" data-v="${k}">${LANG === 'fr' ? fr : en}</button>`).join('')}</div>
+  <div class="seg sortseg" aria-label="${L('Sort', 'Trier')}">${SORTS.map(([k, en, fr]) => `<button class="${V.sort === k ? 'on' : ''}" data-act="sort" data-v="${k}">${L(en, fr)}</button>`).join('')}</div>
   <div class="card" style="padding:4px 12px">${list.map(c => {
     const v = S.rel[c.n]; const lab = E.relLabel(v);
-    return `<button class="person" data-act="person" data-v="${ea(c.n)}">${avatar(c.n, 40)}<div class="pmid"><div class="nm">${esc(c.n)}</div><div class="pill ${lab}">${relT(lab)} · ${v > 0 ? '+' : ''}${v}</div></div>${relBar(v)}</button>`;
+    return `<button class="person" data-act="person" data-v="${ea(c.n)}">${avatar(c.n, 40)}<div class="pmid"><div class="nm">${esc(c.n)}</div><div class="pill ${lab}">${relT(lab)} · ${signed(v)}</div></div>${relBar(v)}</button>`;
   }).join('')}${list.length ? '' : `<p class="muted small" style="padding:10px 0">${L('Nobody matches.', 'Personne ne correspond.')}</p>`}</div>${unmet > 0 ? `<p class="muted small" style="margin:10px 2px">👋 ${L('You know ' + metAll.length + ' of ' + D().chars.length + ' people. New faces show up as the days go by.', 'Tu connais ' + metAll.length + ' personnes sur ' + D().chars.length + '. De nouveaux visages arrivent au fil des jours.')}</p>` : ''}`;
 }
 const D = () => E.D;
@@ -877,13 +892,13 @@ function showBond(who) {
     const sub = ok ? `${a.cost ? '$' + a.cost + ' · ' : ''}${'★'.repeat(a.q)}${'☆'.repeat(5 - a.q)}` : (a.item && S.rel[who] >= a.need ? L('Unlocks with their special gift.', 'Se débloque avec leur cadeau spécial.') : L('Unlocks at relationship ', 'Se débloque à la relation ') + a.need);
     return `<button class="choice ${can ? '' : 'dis'}" data-act="bondfor" data-v="${ea(who + '|' + a.id)}" ${can ? '' : 'aria-disabled="true"'}><span class="lt">·</span><span>${ok ? esc(tr(a.n)) : '🔒 ???'} <span class="muted small">${sub}</span></span></button>`;
   }).join('');
-  openModal(head(who, '') + `<p class="desc">${L('Relationship', 'Relation')}: ${S.rel[who]} · ${relT(E.relLabel(S.rel[who]))}</p><div class="choices">${rows}</div><div class="row" style="margin-top:12px"><button class="btn ghost" data-act="close">${t('Close')}</button></div>`);
+  openModal(head(who, '') + `<p class="desc">${L('Relationship', 'Relation')}: ${S.rel[who]} · ${relT(E.relLabel(S.rel[who]))}</p><div class="choices">${rows}</div>` + closeRow());
 }
 function showCook(rid) {
   const r = E.RECIPES.find(x => x.id === rid); if (!r) return;
   const friends = E.metKids(S).slice().filter(n => S.rel[n] >= 0).sort((a, b) => S.rel[b] - S.rel[a]).slice(0, 8);
   const btn = (who, label, sub) => `<button class="choice" data-act="cookfor" data-v="${ea(rid + '|' + who)}"><span class="lt">·</span><span>${label}${sub ? ` <span class="muted small">${sub}</span>` : ''}</span></button>`;
-  openModal(head(L('Cook ', 'Cuisiner ') + tr(r.n), '') + `<p class="desc">${L('Who is it for?', 'Pour qui ?')}</p><div class="choices">${btn('self', L('Myself', 'Moi-même'), '')}${btn('family', L('The family', 'La famille'), '')}${friends.map(n => btn(n, esc(n), relT(E.relLabel(S.rel[n])))).join('')}</div><div class="row" style="margin-top:12px"><button class="btn ghost" data-act="close">${t('Close')}</button></div>`);
+  openModal(head(L('Cook ', 'Cuisiner ') + tr(r.n), '') + `<p class="desc">${L('Who is it for?', 'Pour qui ?')}</p><div class="choices">${btn('self', L('Myself', 'Moi-même'), '')}${btn('family', L('The family', 'La famille'), '')}${friends.map(n => btn(n, esc(n), relT(E.relLabel(S.rel[n])))).join('')}</div>` + closeRow());
 }
 function viewWork() {
   return kitchenHtml() + familyHtml() + `<div class="card"><h3>${t('Work')}</h3><p class="muted small">${LANG === 'fr' ? 'Gagne de l\'argent en échange de blocs de temps.' : 'Earn money by spending after-school time blocks.'}</p></div><div class="grid2" style="grid-template-columns:1fr">${E.JOBS.map(j => {
@@ -929,10 +944,10 @@ function viewCal() {
 
 /* ---------- Menu tab ---------- */
 function viewMenu() {
-  return `<div class="card"><h3>${t('Menu')}</h3><div class="row" style="margin-top:8px"><button class="btn" data-act="saves">${t('Saved games')}</button><button class="btn" data-act="endbook">${t('Endings')}</button><button class="btn" data-act="summary">${L('Run summary', 'Résumé')}</button>${V.revealed ? `<button class="btn" data-act="notemc">${L('Note for MC', 'Mot pour MC')}</button>` : ''}<button class="btn" data-act="stats">${L('Stats', 'Statistiques')}</button><button class="btn" data-act="settings">${t('Settings')}</button><button class="btn" data-act="help">${t('Help')}</button></div>
-  <div class="row" style="margin-top:12px"><button class="btn ghost" data-act="theme">${LANG === 'fr' ? 'Mode' : 'Mode'}: ${THEME_L()}</button><button class="btn ghost" data-act="lang">${t('Language')}: ${LANG === 'fr' ? 'Français' : 'English'}</button><button class="btn ghost" data-act="newgame">${t('New game')}</button></div></div>
+  return `<div class="card"><h3>${t('Menu')}</h3><div class="row" style="margin-top:8px"><button class="btn" data-act="saves">${t('Saved games')}</button><button class="btn" data-act="endbook">${t('Endings')}</button><button class="btn" data-act="summary">${L('Run summary', 'Résumé')}</button>${noteMcBtn()}<button class="btn" data-act="stats">${L('Stats', 'Statistiques')}</button><button class="btn" data-act="settings">${t('Settings')}</button><button class="btn" data-act="help">${t('Help')}</button></div>
+  <div class="row" style="margin-top:12px">${themeBtn('btn ghost')}${langBtn('btn ghost')}<button class="btn ghost" data-act="newgame">${t('New game')}</button></div></div>
   <div class="card"><h3>${t('Account')}</h3><p class="muted small" style="margin:0">${Store.cloud ? (LANG === 'fr' ? 'Tes sauvegardes sont liées à ton compte Claude et te suivent d\'un appareil à l\'autre.' : 'Your saves are tied to your Claude account and follow you across devices.') : (LANG === 'fr' ? 'Mode hors compte : les sauvegardes restent dans ce navigateur.' : 'Not signed in here: saves stay in this browser only.')}${Store.cloudErr ? ' (cloud save failed once)' : ''}</p></div>
-  <div class="card"><h3>${t('Final stats')}</h3><div class="stats3"><div><b>${S.pop}</b>POP</div><div><b>${S.grade}</b>${t('Grade')}</div><div><b>$${S.money}</b>${t('Money')}</div></div></div>`;
+  <div class="card"><h3>${t('Final stats')}</h3>${statBoxes()}</div>`;
 }
 
 /* ---------- modals ---------- */
@@ -1138,7 +1153,7 @@ function personHtml(name) {
   const list = E.interactionList(S, name);
   return head(name, '') + `<div class="avbig">${avatar(name, 76)}</div><div class="muted small" style="margin:-4px 0 10px">${c.role === 'kid' ? t('Classmates') : c.role === 'fam' ? t('Family') : t('Teachers')} · ${t('Age')} ${c.a} · ${t('Birthday')}: ${esc(c.b)}</div>
   <p style="margin:0 0 10px">${esc(c.pers)}</p>
-  <div class="card" style="padding:10px"><div class="row" style="justify-content:space-between"><b>${t('Relationship')}</b><span class="pill ${lab}">${relT(lab)} · ${v > 0 ? '+' : ''}${v}</span></div>${relBar(v)}
+  <div class="card" style="padding:10px"><div class="row" style="justify-content:space-between"><b>${t('Relationship')}</b><span class="pill ${lab}">${relT(lab)} · ${signed(v)}</span></div>${relBar(v)}
   <div class="row" style="justify-content:space-between;margin-top:8px" ><span class="small muted">${t('Approachability')} ${stars(c.ap)}</span>${c.pop != null ? `<span class="small muted">${t('Popularity')} ${c.pop}</span>` : ''}</div></div>
   ${gf.length ? `<p class="small muted" style="margin:0 0 10px">${L('They gave you', 'Cadeaux reçus de cette personne')}: ${Object.keys(gfc).map(k => esc(k) + (gfc[k] > 1 ? ' ×' + gfc[k] : '')).join(', ')}</p>` : ''}
   <div class="card" style="padding:10px"><b>${t('Rumors')}</b>${known.length ? known.map(r => `<p class="small" style="margin:6px 0 0">“${esc(r.t)}”</p>`).join('') : `<p class="small muted" style="margin:6px 0 0">${LANG === 'fr' ? 'Rien d\'entendu pour l\'instant. Écoute des rumeurs en parlant.' : 'Nothing heard yet. Listen for rumors while talking.'}</p>`}</div>
@@ -1151,7 +1166,7 @@ function subHtml(name) {
   if (s.type === 'about') {
     if (!s.subject) {
       const names = Object.keys(CH).filter(n => n !== name && CH[n].role !== 'teach');
-      return head(name, `<span class="tag alt">${t('Talk about someone')}</span>`) + `<p class="desc">${LANG === 'fr' ? 'De qui veux-tu parler ?' : 'Who do you want to talk about?'}</p><div class="ib">${names.map(n => `<button class="btn" data-act="aboutpick" data-v="${ea(n)}">${esc(n)}<small>${relT(E.relLabel(S.rel[n]))} ${S.rel[n] > 0 ? '+' : ''}${S.rel[n]}</small></button>`).join('')}</div>` + back;
+      return head(name, `<span class="tag alt">${t('Talk about someone')}</span>`) + `<p class="desc">${LANG === 'fr' ? 'De qui veux-tu parler ?' : 'Who do you want to talk about?'}</p><div class="ib">${names.map(n => `<button class="btn" data-act="aboutpick" data-v="${ea(n)}">${esc(n)}<small>${relT(E.relLabel(S.rel[n]))} ${signed(S.rel[n])}</small></button>`).join('')}</div>` + back;
     }
     return head(name, `<span class="tag alt">${t('Talk about someone')}</span>`) + `<p class="desc">${LANG === 'fr' ? 'Que dis-tu sur ' : 'What do you say about '}<b>${esc(s.subject)}</b>?</p><div class="choices">
     <button class="choice" data-act="go" data-v="${ea(s.subject)}|bad"><span class="l">−</span><span>${LANG === 'fr' ? 'Dire du mal dans son dos' : 'Speak badly behind their back'}<small>${LANG === 'fr' ? 'Risqué : peut revenir à ses oreilles' : 'Risky: it can get back to them'}</small></span></button>
@@ -1182,14 +1197,14 @@ function loginScreen() {
        <div class="row"><button class="btn primary" data-act="enter">${fr ? 'Jouer en invité' : 'Play as guest'}</button></div>`;
   return `<div class="app"><div class="title-screen"><div class="brand">savepoint</div>${av}<h1>${nm ? (fr ? 'Content de te revoir' : 'Welcome back') + ',<br><span class="ink">' + esc(nm) + '</span>' : 'School Life<br><span class="ink">Simulator</span>'}</h1>
   <div class="card" style="display:flex;flex-direction:column;gap:12px"><b>${Store.cloud ? '☁ ' + (fr ? 'Compte Claude' : 'Claude account') : (fr ? 'Invité' : 'Guest')}</b>${body}</div>
-  <div class="row"><button class="btn ghost small" data-act="theme">Mode: ${THEME_L()}</button><button class="btn ghost small" data-act="lang">${t('Language')}: ${fr ? 'Français' : 'English'}</button></div></div></div>`;
+  <div class="row">${themeBtn('btn ghost small')}${langBtn('btn ghost small')}</div></div></div>`;
 }
 function titleScreen() {
   const has = V.hasAuto;
   return `<div class="app"><div class="title-screen"><div class="brand">savepoint${V.clues && V.clues.k0 ? '' : ' <i class="blot" data-reveal="k0" aria-hidden="true"></i>'}</div>${V.clues && V.clues.k0 ? `<p class="small" style="margin:0">${inkHtml('k0', CLUES().k0)}</p>` : ''}<h1>School Life<br><span class="ink">Simulator</span></h1>
   <p class="muted" style="max-width:46ch;margin:0">${LANG === 'fr' ? 'Une année scolaire. 194 jours. Popularité, argent, amitiés, rumeurs. Ne tombe pas à zéro.' : 'One school year. 194 days. Popularity, money, friendships, rumors. Do not hit zero.'}</p>${clueN() >= 6 ? `<p class="small" style="margin:0">${inkHtml('k8', CLUES().k8)}</p>` : ''}
   <div class="row">${has ? `<button class="btn primary" data-act="continue">${t('Continue game')}</button>` : ''}<button class="btn ${has ? '' : 'primary'}" data-act="start">${t('New game')}</button><button class="btn ghost" data-act="saves0">${t('Saved games')}</button><button class="btn ghost" data-act="endbook">${t('Endings')}</button></div>
-  <div class="row"><button class="btn ghost small" data-act="settings">${t('Settings')}</button><button class="btn ghost small" data-act="theme">Mode: ${THEME_L()}</button><button class="btn ghost small" data-act="lang">${t('Language')}: ${LANG === 'fr' ? 'Français' : 'English'}</button><button class="btn ghost small" data-act="help">${t('Help')}</button><button class="btn ghost small" data-act="stats">${L('Stats', 'Stats')}</button><button class="btn ghost small" data-act="mute" aria-pressed="${!!PREF.muted}">${PREF.muted ? '🔇' : '🔊'} ${L('Sound', 'Son')}</button></div>
+  <div class="row"><button class="btn ghost small" data-act="settings">${t('Settings')}</button>${themeBtn('btn ghost small')}${langBtn('btn ghost small')}<button class="btn ghost small" data-act="help">${t('Help')}</button><button class="btn ghost small" data-act="stats">${L('Stats', 'Stats')}</button><button class="btn ghost small" data-act="mute" aria-pressed="${!!PREF.muted}">${PREF.muted ? '🔇' : '🔊'} ${L('Sound', 'Son')}</button></div>
   ${has ? `<p class="small muted" style="margin:0">${Store.cloud ? '☁ ' : ''}${esc(V.autoInfo || '')}</p>` : ''}</div></div>`;
 }
 function overScreen() {
@@ -1205,9 +1220,9 @@ function endingScreen() {
   return `<div class="app"><div class="over" style="text-align:left"><div class="brand">${t('Your ending')} · ${fmtDate(E.dayOf(S).d)}</div><h1 style="color:${en.bad ? 'var(--bad)' : 'var(--fg)'};margin:8px 0">${esc(en.n)}</h1>
   <div class="end-quote">${esc(en.q)}</div>${en.body ? `<p>${esc(en.body)}</p>` : ''}<p class="muted"><i>Moral: ${esc(en.moral)}</i></p><p class="small">${inkHtml('k7', CLUES().k7)}</p>
   ${epi.map(e => `<div class="card"><b>${esc(e.n)}</b><div class="end-quote" style="font-size:.95em">${esc(e.q)}</div><div class="small muted"><i>${esc(e.moral)}</i></div></div>`).join('')}
-  <div class="card"><h3>${t('Final stats')}</h3><div class="stats3"><div><b>${S.pop}</b>POP</div><div><b>${S.grade}</b>${t('Grade')}</div><div><b>$${S.money}</b>${t('Money')}</div></div>
-  <p class="small muted" style="margin:10px 0 0">${top.map(n => esc(n.split(' ')[0]) + ' ' + (S.rel[n] > 0 ? '+' : '') + S.rel[n]).join(' · ')}</p></div>
-  <div class="row"><button class="btn primary" data-act="newgame2">${t('Play again')}</button><button class="btn" data-act="readj">📖 ${t('Journal')}</button><button class="btn" data-act="endbook">${t('Endings')}</button><button class="btn" data-act="summary">${L('Run summary', 'Résumé')}</button>${V.revealed ? `<button class="btn" data-act="notemc">${L('Note for MC', 'Mot pour MC')}</button>` : ''}${listenBtn()}<button class="btn ghost" data-act="saves0">${t('Load')}</button></div></div></div>`;
+  <div class="card"><h3>${t('Final stats')}</h3>${statBoxes()}
+  <p class="small muted" style="margin:10px 0 0">${top.map(n => esc(n.split(' ')[0]) + ' ' + signed(S.rel[n])).join(' · ')}</p></div>
+  <div class="row"><button class="btn primary" data-act="newgame2">${t('Play again')}</button><button class="btn" data-act="readj">📖 ${t('Journal')}</button><button class="btn" data-act="endbook">${t('Endings')}</button><button class="btn" data-act="summary">${L('Run summary', 'Résumé')}</button>${noteMcBtn()}${listenBtn()}<button class="btn ghost" data-act="saves0">${t('Load')}</button></div></div></div>`;
 }
 
 /* ---------- dialogs: saved games, endings book ---------- */
@@ -1239,7 +1254,6 @@ const phLeft = () => Math.max(0, E.PHONE_CAP - ((S.today && S.today.ph) || 0));
 function phBadge() { const n = phUnread(); return n ? `<span class="phbadge">${n}</span>` : ''; }
 
 /* ---------- phone minigames ---------- */
-const LX = p => LANG === 'fr' ? p[1] : p[0];
 const RF = [
   [['I bombed the test. I studied all night.', 'J\'ai raté le test. J\'ai étudié toute la nuit.'], [['That is rough. Want to talk about it?', 'C\'est dur. Tu veux en parler ?'], ['You should have studied more.', 'Tu aurais dû étudier plus.'], ['lol ok', 'mdr ok']], 0],
   [['Guess who got the lead in the school play!', 'Devine qui a décroché le rôle principal à la pièce !'], [['Congratulations! You earned it.', 'Félicitations ! Tu l\'as mérité.'], ['Cool.', 'Cool.'], ['They must have run out of people.', 'Ils ont dû manquer de monde.']], 0],
@@ -1365,7 +1379,7 @@ function phoneHtml() {
     const acts = E.phoneList(S, nm);
     return head(nm, '') + offB + `<div class="row" style="justify-content:space-between;align-items:center"><button class="btn ghost small" data-act="phback">← ${L('Chats', 'Discussions')}</button><span class="small muted">${L('Texts left today', 'Textos restants aujourd\'hui')}: <b>${phLeft()}/${E.PHONE_CAP}</b></span></div>
     <div class="phthread" id="phthread">${th.length ? th.map(bub).join('') : `<p class="small muted" style="margin:6px 0">${L('No messages yet. Say something.', 'Aucun message pour l\'instant. Dis quelque chose.')}</p>`}</div>
-    <div class="ib">${acts.map(a => `<button class="btn small ${a.ok ? '' : 'dis'}" data-act="phact" data-v="${a.id}" ${a.ok ? '' : `data-why="${ea(a.why)}"`}>${L(PHL[a.id][0], PHL[a.id][1])}</button>`).join('')}</div>
+    <div class="ib">${acts.map(a => `<button class="btn small ${a.ok ? '' : 'dis'}" data-act="phact" data-v="${a.id}" ${a.ok ? '' : `data-why="${ea(a.why)}"`}>${LX(PHL[a.id])}</button>`).join('')}</div>
     <div class="row" style="margin-top:10px"><button class="btn ghost small" data-act="person" data-v="${ea(nm)}">${L('Open profile', 'Voir le profil')}</button></div>`;
   }
   const names = E.metOf(S, E.KIDS.concat(E.FAM));
@@ -1388,7 +1402,7 @@ async function summaryText() {
   const p = await Store.prefs(); const lines = [];
   lines.push('School Life Simulator — run summary (' + (LANG === 'fr' ? 'FR' : 'EN') + ')');
   if (S) {
-    const kids = E.metKids(S).slice().sort((a, b) => S.rel[b] - S.rel[a]); const sg = n => (S.rel[n] > 0 ? '+' : '') + S.rel[n];
+    const kids = E.metKids(S).slice().sort((a, b) => S.rel[b] - S.rel[a]); const sg = n => signed(S.rel[n]);
     lines.push('Date in game: ' + E.dayOf(S).d + ' (day ' + (S.di + 1) + '/' + E.DAYS.length + ')');
     lines.push('POP ' + S.pop + ' · Grade ' + S.grade + ' · $' + S.money);
     lines.push('Status: ' + (S.ending ? 'ending "' + E.ENDBY[S.ending.id].n + '"' : S.over ? 'game over (POP 0)' : 'in progress'));
@@ -1432,7 +1446,7 @@ function showSettings() {
        <div class="card"><h3>${t('Music')}</h3><div class="row">${sw('mus', PREF.mus)}<input type="range" class="vol" data-vol="vm" min="0" max="100" value="${PREF.vm}" aria-label="${L('Volume', 'Volume')}"></div><p class="small muted" style="margin:8px 0 0">${fr ? 'Musique douce de fond, composée en direct par ton navigateur : calme en classe, plus vive au bal et aux congés, plus sombre quand ça va mal.' : 'Soft background music generated live by your browser: calm in class, brighter at the Ball and on holidays, darker when things go badly.'}</p></div>
        <div class="card"><h3>${t('Voice')}</h3><div class="row">${Voice.ok() ? sw('voice', PREF.voice) + `<input type="range" class="vol" data-vol="vv" min="0" max="100" value="${PREF.vv}" aria-label="${L('Volume', 'Volume')}">` : ''}</div><p class="small muted" style="margin:8px 0 0">${Voice.ok() ? (fr ? 'Quelques scènes sont lues à voix haute (bal, grands moments, fins) avec les voix de synthèse de ton navigateur. Ce ne sont pas des enregistrements.' : 'A few scenes are read aloud (the Ball, big school moments, endings) using your browser\'s built-in voices. These are synthetic, not recordings.') : (fr ? 'La lecture à voix haute n\'est pas disponible dans ce navigateur.' : 'Read-aloud is not available in this browser.')}</p></div>
        <div class="card"><h3>${L('Faint text contrast', 'Contraste du texte pâle')}</h3><div class="row">${sw('ink', !!PREF.ink)}</div><p class="small muted" style="margin:8px 0 0">${fr ? 'Augmente le contraste des textes très pâles et des détails discrets.' : 'Raises the contrast of very faint text and subtle details.'}</p><p class="small" style="margin:8px 0 0">${inkHtml('k2', CLUES().k2)}</p></div>
-       <div class="card"><h3>${L('Share feedback', 'Donner un avis')}</h3><div class="row"><button class="btn" data-act="summary">${L('Copy run summary', 'Copier le résumé')}</button>${V.revealed ? `<button class="btn" data-act="notemc">${L('Note for MC', 'Mot pour MC')}</button>` : ''}</div><p class="small muted" style="margin:8px 0 0">${L('A short text with your stats and progress, to paste in a message with your thoughts.', 'Un court texte avec tes stats et ta progression, à coller dans un message avec ton avis.')}</p></div>
+       <div class="card"><h3>${L('Share feedback', 'Donner un avis')}</h3><div class="row"><button class="btn" data-act="summary">${L('Copy run summary', 'Copier le résumé')}</button>${noteMcBtn()}</div><p class="small muted" style="margin:8px 0 0">${L('A short text with your stats and progress, to paste in a message with your thoughts.', 'Un court texte avec tes stats et ta progression, à coller dans un message avec ton avis.')}</p></div>
        <div class="card"><h3>${t('Keyboard')}</h3><p class="small muted" style="margin:0">${fr ? 'Dans un événement : 1–6 ou A–F pour choisir, Entrée pour continuer, Échap pour fermer. Journal : flèches gauche et droite. Sans fenêtre ouverte : 1–7 pour changer d\'onglet.' : 'In an event: 1–6 or A–F to choose, Enter to continue, Esc to close. Journal: left and right arrows. With nothing open: 1–7 switch tabs.'}</p></div>`;
   });
 }
@@ -1645,7 +1659,7 @@ const DAY_ACTIONS = {
     if (!r) return;
     if (r.err) { toast(r.err); return; }
     const ac = E.BONDS[who].acts.find(x => x.id === aid); Store.autosave(S);
-    openModal(head(who, '') + `<p class="desc">${esc(tr(ac.n))}</p>${chips(r.chips)}<div class="lines">${r.lines.map(l => `<p>${esc(tr(l))}</p>`).join('')}</div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="close">OK</button></div>`);
+    openModal(head(who, '') + `<p class="desc">${esc(tr(ac.n))}</p>` + outcomeHtml(r));
     render();
   },
   cookfor: v => {
@@ -1653,7 +1667,7 @@ const DAY_ACTIONS = {
     if (!r) return;
     if (r.err) { toast(r.err); return; }
     const rc = E.RECIPES.find(x => x.id === rid); const wl = who === 'self' ? L('yourself', 'toi-même') : who === 'family' ? L('your family', 'ta famille') : who; Store.autosave(S);
-    openModal(head(L('Cooked ', 'Cuisiné : ') + tr(rc.n), '') + `<p class="desc">${L('You cooked for ', 'Tu as cuisiné pour ')}${esc(wl)}.</p>${chips(r.chips)}<div class="lines">${r.lines.map(l => `<p>${esc(tr(l))}</p>`).join('')}</div><div class="row" style="margin-top:12px"><button class="btn primary" data-act="close">OK</button></div>`);
+    openModal(head(L('Cooked ', 'Cuisiné : ') + tr(rc.n), '') + `<p class="desc">${L('You cooked for ', 'Tu as cuisiné pour ')}${esc(wl)}.</p>` + outcomeHtml(r));
     render();
   },
 };
