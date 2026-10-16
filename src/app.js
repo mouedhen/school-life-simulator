@@ -4711,39 +4711,122 @@ function phDone(r) {
 
 /* ---------- run summary (for feedback) & note for MC ---------- */
 async function summaryText() {
-  const p = await Store.prefs(); const lines = [];
+  const p = await Store.prefs();
+  const lines = [];
   lines.push('School Life Simulator — run summary (' + L('EN', 'FR') + ')');
   if (S) {
-    const kids = E.metKids(S).slice().sort((a, b) => S.rel[b] - S.rel[a]); const sg = n => signed(S.rel[n]);
+    const kids = E.metKids(S)
+      .slice()
+      .sort((a, b) => S.rel[b] - S.rel[a]);
+    const sg = n => signed(S.rel[n]);
     lines.push('Date in game: ' + E.dayOf(S).d + ' (day ' + (S.di + 1) + '/' + E.DAYS.length + ')');
     lines.push('POP ' + S.pop + ' · Grade ' + S.grade + ' · $' + S.money);
-    lines.push('Status: ' + (S.ending ? 'ending "' + E.ENDBY[S.ending.id].n + '"' : S.over ? 'game over (POP 0)' : 'in progress'));
-    lines.push('Closest: ' + kids.slice(0, 3).map(n => n.split(' ')[0] + ' ' + sg(n)).join(', '));
-    lines.push('Furthest: ' + kids.slice(-2).map(n => n.split(' ')[0] + ' ' + sg(n)).join(', '));
+    lines.push(
+      'Status: ' +
+        (S.ending ? 'ending "' + E.ENDBY[S.ending.id].n + '"' : S.over ? 'game over (POP 0)' : 'in progress'),
+    );
+    lines.push(
+      'Closest: ' +
+        kids
+          .slice(0, 3)
+          .map(n => n.split(' ')[0] + ' ' + sg(n))
+          .join(', '),
+    );
+    lines.push(
+      'Furthest: ' +
+        kids
+          .slice(-2)
+          .map(n => n.split(' ')[0] + ' ' + sg(n))
+          .join(', '),
+    );
     lines.push('Strange moments this run: ' + (S.strange || 0));
   } else lines.push('No game in progress.');
   lines.push('Faint-ink clues found: ' + clueN() + '/15' + (V.revealed ? ' (reveal seen)' : ''));
-  lines.push('Runs finished: ' + ((p.runs || []).length) + ' · Endings seen: ' + ((V.seen || []).length) + '/' + E.ENDINGS.length);
-  lines.push('Screen: ' + window.innerWidth + 'x' + window.innerHeight + ' · ' + ('ontouchstart' in window ? 'touch' : 'mouse'));
+  lines.push(
+    'Runs finished: ' + (p.runs || []).length + ' · Endings seen: ' + (V.seen || []).length + '/' + E.ENDINGS.length,
+  );
+  lines.push(
+    'Screen: ' + window.innerWidth + 'x' + window.innerHeight + ' · ' + ('ontouchstart' in window ? 'touch' : 'mouse'),
+  );
   lines.push('What did you think? (what was fun, confusing, too hard/easy, any bug):');
   return lines.join('\n');
 }
 async function showSummary() {
-  const txt = await summaryText(); V.sumTxt = txt;
-  openModal(() => head(L('Run summary', 'Résumé de la partie'), '') + `<p class="small muted">${L('Copy this and paste it into a message to the person who sent you the game, with your thoughts.', 'Copie ce texte et colle-le dans un message à la personne qui t\'a envoyé le jeu, avec ton avis.')}</p><textarea id="sumbox" class="notebox" rows="10" readonly>${ea(V.sumTxt)}</textarea><div class="row" style="margin-top:10px"><button class="btn primary" data-act="copysum">${L('Copy', 'Copier')}</button></div>`);
+  const txt = await summaryText();
+  V.sumTxt = txt;
+  openModal(
+    () =>
+      head(L('Run summary', 'Résumé de la partie'), '') +
+      (`<p class="small muted">` +
+        L(
+          'Copy this and paste it into a message to the person who sent you the game, with your thoughts.',
+          "Copie ce texte et colle-le dans un message à la personne qui t'a envoyé le jeu, avec ton avis.",
+        ) +
+        `</p><textarea id="sumbox" class="notebox" rows="10" readonly>${ea(V.sumTxt)}</textarea>` +
+        `<div class="row" style="margin-top:10px">` +
+        `<button class="btn primary" data-act="copysum">${L('Copy', 'Copier')}</button></div>`),
+  );
 }
 async function copySummary() {
-  const box = $('#sumbox'); const txt = V.sumTxt || (box && box.value) || '';
-  try { await navigator.clipboard.writeText(txt); toast(L('Copied.', 'Copié.')); } catch (e) { if (box) { box.focus(); box.select(); } toast(L('Select the text and copy it.', 'Sélectionne le texte et copie-le.')); }
+  const box = $('#sumbox');
+  const txt = V.sumTxt || (box && box.value) || '';
+  try {
+    await navigator.clipboard.writeText(txt);
+    toast(L('Copied.', 'Copié.'));
+  } catch (e) {
+    if (box) {
+      box.focus();
+      box.select();
+    }
+    toast(L('Select the text and copy it.', 'Sélectionne le texte et copie-le.'));
+  }
 }
 async function showNoteMC() {
-  const p = await Store.prefs(); V.noteVal = p.note || '';
-  openModal(() => head(L('A note for MC', 'Un mot pour MC'), '') + `<p class="small muted">${L('MC knows someone is holding the pen. Write one short line. In your next run, MC will find it on the first page.', 'MC sait que quelqu\'un tient le stylo. Écris une courte ligne. Dans ta prochaine partie, MC la trouvera sur la première page.')}</p><textarea id="notebox" class="notebox" rows="3" maxlength="120" placeholder="${ea(L('For example: I will try to be gentler with you.', 'Par exemple : j\'essaierai d\'être plus doux avec toi.'))}">${ea(V.noteVal)}</textarea><div class="row" style="margin-top:10px"><button class="btn primary" data-act="savenote">${L('Leave the note', 'Laisser le mot')}</button>${V.noteVal ? `<button class="btn" data-act="clearnote">${L('Remove it', 'L\'enlever')}</button>` : ''}</div>`);
+  const p = await Store.prefs();
+  V.noteVal = p.note || '';
+  openModal(
+    () =>
+      head(L('A note for MC', 'Un mot pour MC'), '') +
+      (`<p class="small muted">` +
+        L(
+          'MC knows someone is holding the pen. Write one short line. In your next run, MC will find it on the first page.',
+          "MC sait que quelqu'un tient le stylo. Écris une courte ligne. Dans ta prochaine partie, MC la trouvera sur la première page.",
+        ) +
+        `</p>` +
+        `<textarea id="notebox" class="notebox" rows="3" maxlength="120"` +
+        (` placeholder="` +
+          ea(
+            L(
+              'For example: I will try to be gentler with you.',
+              "Par exemple : j'essaierai d'être plus doux avec toi.",
+            ),
+          ) +
+          `">`) +
+        `${ea(V.noteVal)}</textarea><div class="row" style="margin-top:10px">` +
+        `<button class="btn primary" data-act="savenote">${L('Leave the note', 'Laisser le mot')}</button>` +
+        (V.noteVal ? `<button class="btn" data-act="clearnote">${L('Remove it', "L'enlever")}</button>` : '') +
+        `</div>`),
+  );
 }
 async function saveNote(clear) {
-  const box = $('#notebox'); const v = clear ? '' : ((box && box.value) || '').replace(/[<>&"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
-  const p = await Store.prefs(); Store.prefs(Object.assign({}, p, { note: v })); V.noteVal = v;
-  toast(v ? L('The note is waiting on the first page.', 'Le mot attend sur la première page.') : L('Note removed.', 'Mot retiré.')); closeModal(); if (S) render();
+  const box = $('#notebox');
+  const v = clear
+    ? ''
+    : ((box && box.value) || '')
+        .replace(/[<>&"]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 120);
+  const p = await Store.prefs();
+  Store.prefs(Object.assign({}, p, { note: v }));
+  V.noteVal = v;
+  toast(
+    v
+      ? L('The note is waiting on the first page.', 'Le mot attend sur la première page.')
+      : L('Note removed.', 'Mot retiré.'),
+  );
+  closeModal();
+  if (S) render();
 }
 /* ---------- settings & help ---------- */
 function showSettings() {
