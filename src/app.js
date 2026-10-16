@@ -1180,34 +1180,92 @@ function render() {
 /* ---------- faint ink mystery ---------- */
 /* the Player mystery: faint ink. Clue ids: k0..k11 fixed places, n:<date> / n:end journal notes. */
 const CLUES = () => ({
-  k0: L('Page one is not the first page.', 'La page un n\'est pas la première page.'),
-  k1: L('The rules were never only for MC.', 'Les règles n\'ont jamais été que pour MC.'),
+  k0: L('Page one is not the first page.', "La page un n'est pas la première page."),
+  k1: L('The rules were never only for MC.', "Les règles n'ont jamais été que pour MC."),
   k2: L('MC cannot press these buttons. You can.', 'MC ne peut pas appuyer sur ces boutons. Toi, si.'),
-  k4: L('Every coin was spent by a hand that is not MC\'s.', 'Chaque pièce a été dépensée par une main qui n\'est pas celle de MC.'),
-  k5: L('The calendar ends. Someone is still turning it.', 'Le calendrier finit. Quelqu\'un continue de le tourner.'),
+  k4: L(
+    "Every coin was spent by a hand that is not MC's.",
+    "Chaque pièce a été dépensée par une main qui n'est pas celle de MC.",
+  ),
+  k5: L('The calendar ends. Someone is still turning it.', "Le calendrier finit. Quelqu'un continue de le tourner."),
   k6: L('When they say your name, who looks up?', 'Quand ils disent ton nom, qui lève les yeux ?'),
   k7: L('A year ends. The pen does not.', 'Une année se termine. Le stylo, non.'),
   k8: L('Hello, you. Yes, you. Not MC.', 'Bonjour, toi. Oui, toi. Pas MC.'),
 });
 const plainMC = x => ea(x).replace(/\bMC\b/g, () => myName());
 const FAINT = () => L('Faint writing', 'Écriture pâle');
-function inkHtml(id, text) { const on = !!(V.clues && V.clues[id]); return `<span class="fink${on ? ' on' : ''}" data-clue="${ea(id)}" tabindex="0" role="note">${plainMC(text)}</span>`; }
-const clueN = () => { const ks = Object.keys(V.clues || {}); const notes = ks.filter(k => k.charAt(0) === 'n').length; return ks.length - notes + [2, 5, 9].filter(x => notes >= x).length; };
-const metaSync = () => { try { if (S) S.meta = { clues: clueN() }; } catch (e) {} };
+function inkHtml(id, text) {
+  const on = !!(V.clues && V.clues[id]);
+  return (
+    `<span class="fink${on ? ' on' : ''}" data-clue="${ea(id)}" tabindex="0" role="note">${plainMC(text)}` + `</span>`
+  );
+}
+const clueN = () => {
+  const ks = Object.keys(V.clues || {});
+  const notes = ks.filter(k => k.charAt(0) === 'n').length;
+  return ks.length - notes + [2, 5, 9].filter(x => notes >= x).length;
+};
+const metaSync = () => {
+  try {
+    if (S) S.meta = { clues: clueN() };
+  } catch (e) {}
+};
 function revealInk(el) {
-  if (!el || !el.dataset || !el.dataset.clue) return; const id = el.dataset.clue; el.classList.add('on');
-  V.clues = V.clues || {}; if (V.clues[id]) return;
-  const before = clueN(); V.clues[id] = 1; metaSync();
-  try { if (S && !S.over) E.noteStrange(S); } catch (e) {}
-  try { Store.prefs().then(p => Store.prefs(Object.assign({}, p, { clues: V.clues }))); } catch (e) {}
+  if (!el || !el.dataset || !el.dataset.clue) return;
+  const id = el.dataset.clue;
+  el.classList.add('on');
+  V.clues = V.clues || {};
+  if (V.clues[id]) return;
+  const before = clueN();
+  V.clues[id] = 1;
+  metaSync();
+  try {
+    if (S && !S.over) E.noteStrange(S);
+  } catch (e) {}
+  try {
+    Store.prefs().then(p => Store.prefs(Object.assign({}, p, { clues: V.clues })));
+  } catch (e) {}
   const n = clueN();
-  toast(n >= E.REVEAL_AT && before < E.REVEAL_AT ? L('Something is about to change.', 'Quelque chose va changer.') : Object.keys(V.clues).length === 1 ? L('There is faint writing here. You are not sure why you can read it.', 'Il y a une écriture très pâle ici. Tu ne sais pas pourquoi tu peux la lire.') : n > before ? L('Another trace of faint ink.', 'Une autre trace d\'encre pâle.') : L('Faint writing, noted.', 'Écriture pâle, notée.'));
-  try { SFX.chime(); } catch (e) {}
+  toast(
+    n >= E.REVEAL_AT && before < E.REVEAL_AT
+      ? L('Something is about to change.', 'Quelque chose va changer.')
+      : Object.keys(V.clues).length === 1
+        ? L(
+            'There is faint writing here. You are not sure why you can read it.',
+            'Il y a une écriture très pâle ici. Tu ne sais pas pourquoi tu peux la lire.',
+          )
+        : n > before
+          ? L('Another trace of faint ink.', "Une autre trace d'encre pâle.")
+          : L('Faint writing, noted.', 'Écriture pâle, notée.'),
+  );
+  try {
+    SFX.chime();
+  } catch (e) {}
 }
 function inkStatHtml(p) {
-  const r = (p.runs || []).length + 1; const n = clueN();
-  const txt = L('MC lives this year once. You have lived it ' + r + (r === 1 ? ' time.' : ' times.'), 'MC vit cette année une seule fois. Toi, tu l\'as vécue ' + r + ' fois.');
-  return `<p class="small" style="margin:0 0 8px">${inkHtml('k3', txt)}</p>` + (n ? `<div class="endrow"><span class="dot on"></span><div><b>${L('Faint writing found', 'Écriture pâle trouvée')}: ${n}</b>${Object.keys(V.clues || {}).filter(k => /^k\d/.test(k)).sort().map(k => `<div class="small muted" style="font-style:italic;margin-top:2px">${plainMC(k === 'k3' ? txt : CLUES()[k] || '')}</div>`).join('')}</div></div>` : '');
+  const r = (p.runs || []).length + 1;
+  const n = clueN();
+  const txt = L(
+    'MC lives this year once. You have lived it ' + r + (r === 1 ? ' time.' : ' times.'),
+    "MC vit cette année une seule fois. Toi, tu l'as vécue " + r + ' fois.',
+  );
+  return (
+    `<p class="small" style="margin:0 0 8px">${inkHtml('k3', txt)}</p>` +
+    (n
+      ? `<div class="endrow"><span class="dot on"></span><div>` +
+        `<b>${L('Faint writing found', 'Écriture pâle trouvée')}: ${n}</b>` +
+        Object.keys(V.clues || {})
+          .filter(k => /^k\d/.test(k))
+          .sort()
+          .map(
+            k =>
+              `<div class="small muted" style="font-style:italic;margin-top:2px">${plainMC(k === 'k3' ? txt : CLUES()[k] || '')}` +
+              `</div>`,
+          )
+          .join('') +
+        `</div></div>`
+      : '')
+  );
 }
 /* ---------- Today tab ---------- */
 function viewToday() {
