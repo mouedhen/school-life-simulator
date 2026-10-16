@@ -1,6 +1,68 @@
-/* UI layer */
+/* UI layer (app.js)
+ *
+ * Everything the player sees: screens, tabs, modals, sound, journal, phone. Built as one IIFE that shares the
+ * page's global scope with data.js, talk.js, fr.js, i18n.js and engine.js (concatenated by build.py, order matters).
+ * The engine (window.Engine, here `E`) owns the game rules and the seeded RNG; this file only renders and reacts
+ * to clicks. Never call engine functions "just to look": many of them advance the seeded RNG.
+ *
+ * How a click works: every button carries data-act="<action>" (and often data-v="<value>").
+ * onClick() (section "click actions" near the end of the file) dispatches on the action, then the handler
+ * calls render() (the page behind) and/or renderModal() (the overlay).
+ *
+ * Two state objects:
+ *   S  the saved game (engine state): day, stats, relationships, log, phone threads... Saved by Store, rebuilt by
+ *      the engine, read here to draw screens. Only the engine should change game rules in it.
+ *   V  the UI state (never saved with a game): which tab and modal are open, sort and filter choices, the
+ *      current event and its result, minigame and journal positions, and a few values loaded from prefs.
+ *      Its fields are listed next to its declaration in "app state" below.
+ *
+ * English strings are also the keys of the French layer (tr() translates sentence by sentence; t() and L()
+ * pick UI words). Changing an English sentence breaks its French translation.
+ *
+ * Contents (sections in file order):
+ *   helpers ................ $, tr, ea (escape attribute), esc (translate + escape)
+ *   i18n ................... FR table of UI words, L(en, fr), t(key), LANG and THEME
+ *   preferences & a11y ..... PREF (text size, motion, sound, voice, volumes), applyA11y, savePrefs
+ *   sound effects .......... SFX: tiny WebAudio synth for clicks and results
+ *   background music ....... Music: live-generated moods (calm, bright, exam, win, sad, dark, menu), musMood()
+ *   voice .................. Voice: browser text-to-speech for the Ball, special events and endings
+ *   icons .................. IC: nav bar SVG paths
+ *   storage / accounts ..... Store: local or Claude-account saves, prefs, autosave
+ *   app state .............. S, V, result chips, toast
+ *   render shell ........... fmtDate, hud, nav, render() (draws #root, then the modal)
+ *   faint ink mystery ...... CLUES, inkHtml, clueN, revealInk, inkStatHtml
+ *   Today tab .............. viewToday
+ *   journal: text .......... diary lines, day text, memories of past runs, French diary, the Player's notes
+ *   journal: pages ......... day pages, farewells, ending pages
+ *   journal: book .......... spreads, cover, page flips, fitting text on a page
+ *   avatars ................ avatar(name, size): procedural SVG faces
+ *   People tab ............. item icons, sort orders, viewPeople
+ *   Shop tab ............... viewShop
+ *   Work tab ............... kitchen, family time, bond and cook modals, jobs
+ *   Calendar tab ........... viewCal
+ *   Menu tab ............... viewMenu
+ *   modals ................. openModal, closeModal, renderModal, head()
+ *   school minigames ....... memory and quiz games inside events
+ *   events ................. showEvent, resultHtml, afterEvent
+ *   run records ............ runRecord, recordRun, memOf, markEnding
+ *   tutorial ............... TUT, startTut, endTut
+ *   starting traits ........ TRAITS, applyTrait
+ *   achievements & stats ... ACH, achCtx, showStats
+ *   person profile ......... showPerson, personHtml, subHtml
+ *   screens ................ login, title, game over, ending
+ *   dialogs ................ saved games, endings book
+ *   phone .................. contacts, unread badge, minigames, group chats, threads, showPhone
+ *   run summary & note ..... summary text for testers, note for MC
+ *   settings & help ........ showSettings, showHelp
+ *   game start & people .... startNew, beginGame, doInter
+ *   click actions .......... onClick
+ *   keyboard ............... onKey
+ *   boot ................... event listeners, prefs loading, first render
+ */
 (function () {
 'use strict';
+
+/* ---------- helpers ---------- */
 const E = window.Engine, CH = E.CH, DAYS = E.DAYS;
 const $ = s => document.querySelector(s);
 const myName = () => { try { return (S && S.name) || 'MC'; } catch (e) { return 'MC'; } };
@@ -56,6 +118,7 @@ function applyA11y() {
 }
 async function savePrefs() { try { const p = await Store.prefs(); Store.prefs(Object.assign({}, p, { ink: PREF.ink, fs: PREF.fs, rm: PREF.rm, snd: PREF.snd, voice: PREF.voice, mus: PREF.mus, muted: PREF.muted, vm: PREF.vm, vs: PREF.vs, vv: PREF.vv })); } catch (e) {} }
 
+/* ---------- sound effects (SFX) ---------- */
 /* tiny WebAudio synth: no files, quiet, only after a click, and the player can turn it off */
 const SFX = {
   c: null, g: null,
@@ -101,7 +164,9 @@ const SFX = {
   },
 };
 
-/* background music: generated live in the browser (no files). Three moods that crossfade: calm school, bright (Ball/holidays/good endings), dark (low popularity/bad endings) */
+/* ---------- background music ---------- */
+/* generated live in the browser (no files). Moods crossfade: calm (class), bright (Ball, holidays), exam (minigames, tests),
+   win / sad (good / hard endings), dark (low popularity), menu (title and saved games). musMood() picks one. */
 const Music = {
   c: null, grp: null, mood: '', timer: null, nt: 0, st: 0, seed: 7, started: false,
   M: {
@@ -186,6 +251,7 @@ function musMood() {
 document.addEventListener('visibilitychange', () => { try { if (Music.c) (document.hidden ? Music.c.suspend() : (PREF.mus && Music.c.resume())); } catch (e) {} });
 document.addEventListener('pointerdown', () => { if (PREF.mus && !PREF.muted && !Music.started) Music.start(); }, { capture: true });
 
+/* ---------- voice ---------- */
 /* browser text-to-speech for a few scenes (the Ball, the big school moments, the endings); synthetic voices, not recordings */
 const Voice = {
   ok() { try { return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); } catch (e) { return false; } },
@@ -299,8 +365,25 @@ const Store = {
 };
 
 /* ---------- app state ---------- */
+/* S: the saved game, created by E.newGame() and loaded by Store.get(); null on the title screen.
+   V: UI-only state, never saved with a game. Fields (most are created on first use):
+     navigation .... tab (current tab), filter / sort / q (People tab), calM (month index in Calendar),
+                     gate (login screen still shown), hasAuto / autoInfo (title-screen Continue button)
+     modal ......... modal (HTML string or function drawing the overlay; null when closed), savesOpen
+     events ........ evCur (event on screen), evPick (choice index waiting for a minigame or gift),
+                     res (result of the last choice or interaction), resTitle, mg (school minigame), evIdx (unused)
+     people ........ person (open profile), sub (open sub-menu: {type, id, subject})
+     phone ......... ph ({name}: thread, '#class', '#fam', '?', '@games' or '@play'), pg (phone minigame),
+                     pgT / pgTO (its interval and timeout)
+     journal ....... jS (current spread, -1 cover, 101 back cover, null = closed), jFinal (journal opened from the
+                     end screen), pens (ink colour per person)
+     sound/voice ... sfxKey / sfxRes / voiceEv (what was already played, so it does not repeat), speaking
+     prefs mirror .. clues (faint ink found), revealed, seen (endings seen), prefName
+     new game ...... trait, ngpOn (New Game+ bonus), tut / tutFirst (tutorial step), overDone (game over recorded)
+     dialogs ....... sumTxt (run summary), noteVal (note for MC) */
 let S = null; const V = { tab: 'today', modal: null, filter: 'all', sort: 'def', q: '', calM: 0, res: null, evIdx: null, sub: null, seen: [] }; window.__V = V; window.__S = () => S;
 
+/* result chips (POP +2, Grade −1, ★ flag...) and the toast message */
 function pretty(f) { return String(f).toLowerCase().replace(/_/g, ' '); }
 function chipHtml(c) {
   switch (c.k) {
@@ -357,8 +440,8 @@ function render() {
   renderModal();
 }
 
-/* ---------- views ---------- */
-/* ---------- the Player mystery: faint ink ---------- */
+/* ---------- faint ink mystery ---------- */
+/* the Player mystery: faint ink. Clue ids: k0..k11 fixed places, n:<date> / n:end journal notes. */
 const CLUES = () => ({
   k0: L('Page one is not the first page.', 'La page un n\'est pas la première page.'),
   k1: L('The rules were never only for MC.', 'Les règles n\'ont jamais été que pour MC.'),
@@ -389,6 +472,7 @@ function inkStatHtml(p) {
   const txt = L('MC lives this year once. You have lived it ' + r + (r === 1 ? ' time.' : ' times.'), 'MC vit cette année une seule fois. Toi, tu l\'as vécue ' + r + ' fois.');
   return `<p class="small" style="margin:0 0 8px">${inkHtml('k3', txt)}</p>` + (n ? `<div class="endrow"><span class="dot on"></span><div><b>${L('Faint writing found', 'Écriture pâle trouvée')}: ${n}</b>${Object.keys(V.clues || {}).filter(k => /^k\d/.test(k)).sort().map(k => `<div class="small muted" style="font-style:italic;margin-top:2px">${plainMC(k === 'k3' ? txt : CLUES()[k] || '')}</div>`).join('')}</div></div>` : '');
 }
+/* ---------- Today tab ---------- */
 function viewToday() {
   const d = E.dayOf(S);
   let top = '';
@@ -403,7 +487,8 @@ function viewToday() {
   const lastE = S.log.slice(-1)[0];
   return `${top}<button class="card" data-act="tab" data-v="journal" style="width:100%;text-align:left"><h3>📖 ${t('Journal')}</h3><div class="muted small">${lastE ? esc(lastE.t) : t('Journal is empty')}</div></button>`;
 }
-/* ---------- leather journal ---------- */
+/* ---------- journal: text ---------- */
+/* turns log entries ("Hang out — Maya Bennett") into first-person diary sentences */
 const DI = { 'Talk / ask about a topic': 'I had a long chat with {n} today.', 'Give a compliment': 'I told {n} something kind, and I meant it.', 'Hang out': '{n} and I hung out after school.', 'Invite to a group activity': 'I invited {n} to do something with a group.', 'Study together': '{n} and I studied together.', 'Ask for help': 'I asked {n} for a hand.', 'Ask for money': 'I asked {n} for some money. It felt awkward.', 'Offer to lend money': 'I offered to lend {n} some money.', 'Share a rumor': 'I passed a rumour on to {n}. Hmm.', 'Start a rumor': 'I started a rumour about {n}. I hope it never comes back to me.', 'Investigate a rumor': 'I looked into a rumour about {n}.', 'Defend someone': 'I stood up for {n}.', 'Apologize': 'I apologized to {n}.', 'Insult': 'I said something harsh to {n}. I am not proud of it.', 'Debate / challenge': '{n} and I got into a debate.', 'Harmless prank': 'I pulled a harmless prank on {n}.', 'Fight / confrontation': '{n} and I had a confrontation.', 'Set a boundary': 'I set a boundary with {n}.', 'Try to reconcile': 'I tried to make peace with {n}.', 'Share a secret': 'I told {n} a secret.', 'Ask for advice': 'I asked {n} for advice.', 'Sit together at lunch': 'I sat with {n} at lunch.', 'Send a message': 'I texted {n}.', 'Tease playfully': 'I teased {n}, just for fun.', 'Cheer them up': 'I tried to cheer {n} up.', 'Work on a project together': '{n} and I worked on a project together.', 'Ask to join their group': 'I asked to join {n}\'s group.' };
 const fn1 = n => /^(Ms|Mr|Mrs|Dr)\./.test(n) ? n : String(n).split(' ')[0];
 const me = x => String(x).replace(/\byou are\b/gi, 'I am').replace(/\byou (?=(previously|have|had|were|do|did|can|will|would|just|still|really|always|never|want|need|like|may|might|could|should)\b)/gi, 'I ').replace(/\b(someone|somebody|anyone|anybody|everyone|everybody|person|friend|classmate|people|those|what|whom|who|that|than|when|where|because|if|while|before|after|until|since|though) you\b/gi, '$1 I').replace(/\byourself\b/gi, 'myself').replace(/\byour\b/gi, 'my').replace(/\byou\b/gi, 'me').replace(/\bYou\b/g, 'I');
@@ -438,7 +523,7 @@ function diary(l) {
   }
   return me(x);
 }
-/* ---------- journal: 195 day pages + 5 ending pages ---------- */
+/* journal: 195 day pages + 5 ending pages. hsh/pk give stable "random" picks from a date or name. */
 const JN = () => E.DAYS.length + 5;
 const hsh = x => { let h = 2166136261; x = String(x); for (let i = 0; i < x.length; i++) { h ^= x.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 const pk = (arr, seed) => arr[hsh(seed) % arr.length];
@@ -517,12 +602,13 @@ function diaryDay(l) {
   }
   return diary(l);
 }
+/* ---------- journal: pages ---------- */
 const dayHead = d => { const dt = new Date(d + 'T12:00:00Z'); return dt.toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }); };
 const rot = s => (((hsh(s) % 9) - 4) / 10);
 function pg(inner, num, cls, face) { return `<div class="pg ${cls || ''} ${face ? 'f' + face : ''}"><div class="inner">${inner}</div>${num ? `<div class="pn">— ${num} —</div>` : ''}</div>`; }
 const PEN = ['#1f4e8c', '#2e6b3a', '#6b2f8c', '#0f6b6b', '#a65a00', '#8c2f5a', '#3d3d9c', '#6b6b00', '#2b6f87', '#7a3b1d'];
 function penOf(name) { V.pens = V.pens || {}; if (!V.pens[name]) V.pens[name] = PEN[Object.keys(V.pens).length % PEN.length]; return V.pens[name]; }
-/* ---------- the Player's own hand: pencil margin notes (a separate character from MC) ---------- */
+/* the Player's own hand: pencil margin notes (a separate character from MC), written in faint ink */
 const PL_UP = ['That felt right. I think.', 'Good choice. I smiled at this one.', 'Nice. Keep going, you are doing fine.', 'I liked this day.'];
 const PL_DN = ['I am sorry. That one was on me.', 'I was not sure about that choice. I should have waited.', 'I wish I had picked differently.', 'Rough day. I felt it too.'];
 const PL_NEU = ['A quiet day. I do not mind those.', 'I was just watching today.', 'Nothing dramatic. I like the quiet ones.', 'Small days matter too.'];
@@ -616,6 +702,7 @@ function endPage(k) {
   const good = !en.bad;
   return h('What ' + nm + ' feels now') + mcp(good ? 'Strangely, I feel lighter than I thought I would. Not because everything went perfectly, but because I can look at what I did and recognise myself.' : 'I feel heavy, and a bit ashamed. I got what I wanted, and I am not sure I wanted the right thing.') + mcp(x.kind >= 3 ? 'The kind things I did are the parts I would live again.' : 'I wish I had been braver about doing the kind thing more often.') + mcp(S.grade >= 80 ? 'My grades turned out all right, and I earned them.' : S.grade < 50 ? 'My grades were not my best work, and I know it.' : 'My grades were fine. Not amazing, not terrible.') + nar('And that was the year.') + (!S.mem ? mcp('Sometimes it felt like I was not the only one holding the pen.') : mcp(S.mem.last.id === (S.ending && S.ending.id) ? 'The same ending as last time. Maybe some things find us either way.' : 'It ended differently than I felt it would. I am glad.')) + (S.mem && S.mem.n >= 2 ? mcp('To whoever keeps turning my pages: thank you for this year.') : '') + mcp('Next year is a new page.') + `<p class="hw sig mc">— ${esc(nm)}</p>` + plEnd(good);
 }
+/* ---------- journal: book ---------- */
 /* spreads: s=-1 front cover, 0..100 open spreads, 101 back cover. Spread 0: [endpaper | p1]; s: [p(2s) | p(2s+1)]; 100: [p200 | endpaper] */
 const JS_MAX = 100;
 const endpaperHtml = () => `<div class="pg endp"><div class="inner">✦</div></div>`;
@@ -697,7 +784,8 @@ function relBar(v) {
   return `<div class="relbar"><span class="mid"></span><i style="${pos ? 'left:50%' : 'right:50%'};width:${w}%;background:${pos ? 'var(--good)' : 'var(--bad)'}"></i></div>`;
 }
 
-/* ---------- simple drawn avatars (procedural SVG, deterministic per name) ---------- */
+/* ---------- avatars ---------- */
+/* simple drawn avatars (procedural SVG, deterministic per name) */
 const AVC = { skin: ['#f6d9c0', '#eec39f', '#d9a577', '#b57f55', '#8a5a3b', '#5f3d28'], hair: ['#2b1d17', '#4a2f20', '#7a4a2a', '#b07a3c', '#d9b05a', '#a8412a', '#3b3b44', '#c9c9d0'], bg: ['#cfe3f5', '#f5d6df', '#d9ecd1', '#f3e6bf', '#e0d6f2', '#d1ece8', '#f6dcc8'] };
 function avHash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function avatar(name, size) {
@@ -729,6 +817,8 @@ function avatar(name, size) {
   return `<svg class="av" role="img" aria-label="${ea(name)}" style="width:${sz}px;height:${sz}px" viewBox="0 0 64 64"><clipPath id="avc${h}"><circle cx="32" cy="32" r="32"/></clipPath><g clip-path="url(#avc${h})"><rect width="64" height="64" fill="${bg}"/>${back}${neck}${shirt}${ear}${face}${cheek}${ey}${mouth}${front}${ac}</g></svg>`;
 }
 
+/* ---------- People tab ---------- */
+/* item icons (also used by the Shop, the bag and event gifts) */
 const ICON = { 'Notebook & pen set': '📓', 'Sticker pack': '⭐', 'Snack': '🍪', 'Fancy snack box': '🍱', 'Hair clips / accessory': '🎀', 'Bracelet': '📿', 'Sketchbook': '🎨', 'Used paperback': '📖', 'Board game': '🎲', 'Sports ball': '⚽', 'Headphones': '🎧', 'Phone charm': '🔑', 'Reusable water bottle': '🧴', 'Small plush': '🧸', 'Gift card': '💳', 'Craft kit': '✂️', 'Bicycle tune-up': '🚲', 'Movie ticket': '🎟️', 'Café drink': '☕', 'Mystery box': '🎁', 'Study guide': '📘', 'Flashcards': '🗂️', 'Calculator': '🧮', 'Tutoring session': '🧑‍🏫', 'Lucky charm': '🍀', 'Chocolate box': '🍫', 'Houseplant': '🪴', 'Comic book': '📚', 'Poster': '🖼️', 'Friendship bracelet kit': '🧵', 'Concert ticket': '🎫', 'Lunch voucher': '🥪', 'Sunglasses': '🕶️', 'Hoodie': '🧥', 'Stylish backpack': '🎒', 'Smartwatch': '⌚', 'Handmade gift': '💝', 'Cooking knife': '🔪', "Dad's toolbox": '🧰', "Riley's hidden card": '🃏', "Max's lucky controller": '🎮', "Oliver's varsity jacket": '🏀', "Sophie's planner": '📒', 'Club badge': '🏅', 'Lost-and-found scarf': '🧣', 'Charity wristband': '🎗️', 'Magnifying glass': '🔍', 'Friendship pin': '📌', 'Sorry card pack': '💌', 'Thank-you basket': '🧺', 'Holiday sweater': '🎄', 'Volunteer tee': '👕', 'Brave badge': '🛡️', 'Fancy pen': '🖋️', 'Pocket journal': '📔', 'Showcase apron': '🍳', 'Group photo frame': '📸' };
 const KIND_ICON = { gift: '🎁', cosmetic: '👕', perm: '⭐', use: '✨', booster: '🚀', prep: '📝' };
 const itemIcon = (n, kind) => ICON[n] || KIND_ICON[kind] || '🎁';
@@ -749,6 +839,7 @@ function viewPeople() {
 }
 const D = () => E.D;
 
+/* ---------- Shop tab ---------- */
 function viewShop() {
   const items = E.SHOP.map(it => {
     const owned = it.kind === 'perm' ? (S.perm[it.n] ? 1 : 0) : (S.inv[it.n] || 0);
@@ -763,6 +854,7 @@ function viewShop() {
   return `<div class="card"><h3>${t('Bag')}</h3>${bagHtml}</div><h3 style="margin:14px 0 8px">${t('Shop')}</h3><div class="grid2">${items}</div><p class="small" style="margin:14px 0 0">${inkHtml('k4', CLUES().k4)}</p>`;
 }
 
+/* ---------- Work tab: kitchen, family time, jobs ---------- */
 function kitchenHtml() {
   const lvl = E.cookLevel(S), knife = !!S.perm['Cooking knife'];
   const rows = E.RECIPES.map(r => {
@@ -801,7 +893,7 @@ function viewWork() {
   }).join('')}</div>`;
 }
 
-/* calendar */
+/* ---------- Calendar tab ---------- */
 const HOLI = { '2026-09-07': 'Labour Day', '2026-10-12': 'Thanksgiving', '2027-03-26': 'Good Friday', '2027-03-29': 'Easter Mon.', '2027-05-24': 'Victoria Day' };
 const EVTAG = { '2026-08-28': 'First day', '2026-10-23': 'Spirit day', '2026-10-30': 'Halloween', '2026-12-11': 'Concert', '2026-12-18': 'Winter party', '2027-01-04': 'Welcome back', '2027-02-12': 'Friendship', '2027-03-25': 'Spirit day', '2027-04-23': 'Earth Day', '2027-05-28': 'Final project', '2027-06-11': 'Finals', '2027-06-16': 'Ball plan', '2027-06-23': 'Last day' };
 const MONTHS = [[2026, 7], [2026, 8], [2026, 9], [2026, 10], [2026, 11], [2027, 0], [2027, 1], [2027, 2], [2027, 3], [2027, 4], [2027, 5]];
@@ -836,6 +928,7 @@ function viewCal() {
   return `<div class="cal-tabs">${tabs}</div><div class="card"><h3 style="margin-bottom:10px">${esc(title)}</h3><p class="small" style="margin:-4px 0 8px">${inkHtml('k5', CLUES().k5)}</p><div class="cal">${cells}</div><div class="legend"><span>✕ ${t('Crossed days')}</span><span><span class="pd" style="background:#3b6fd4;color:#fff;border-radius:3px;padding:0 4px;font-size:11px">${t('Pédago')}</span></span><span>◯ ${t('The Ball')}</span><span>▒ ${t('Holiday')}</span></div></div>`;
 }
 
+/* ---------- Menu tab ---------- */
 function viewMenu() {
   return `<div class="card"><h3>${t('Menu')}</h3><div class="row" style="margin-top:8px"><button class="btn" data-act="saves">${t('Saved games')}</button><button class="btn" data-act="endbook">${t('Endings')}</button><button class="btn" data-act="summary">${L('Run summary', 'Résumé')}</button>${V.revealed ? `<button class="btn" data-act="notemc">${L('Note for MC', 'Mot pour MC')}</button>` : ''}<button class="btn" data-act="stats">${L('Stats', 'Statistiques')}</button><button class="btn" data-act="settings">${t('Settings')}</button><button class="btn" data-act="help">${t('Help')}</button></div>
   <div class="row" style="margin-top:12px"><button class="btn ghost" data-act="theme">${LANG === 'fr' ? 'Mode' : 'Mode'}: ${THEME_L()}</button><button class="btn ghost" data-act="lang">${t('Language')}: ${LANG === 'fr' ? 'Français' : 'English'}</button><button class="btn ghost" data-act="newgame">${t('New game')}</button></div></div>
@@ -859,6 +952,7 @@ function renderModal() {
 }
 const head = (title, tag) => `<div class="m-head"><div>${tag || ''}<h2>${esc(title)}</h2></div><button class="close" data-act="close" aria-label="Close">×</button></div>`;
 
+/* ---------- school minigames (memory pairs and quizzes inside academic events) ---------- */
 function newMg(ev) {
   const def = E.quiz(S, ev.title);
   if (def.type === 'quiz') return { def, i: 0, ok: 0, ans: null, rem: [], hints: def.hints, done: false };
@@ -889,6 +983,7 @@ function mgHtml(ev) {
   return h + `<p class="sub">${LANG === 'fr' ? 'Question' : 'Question'} ${m.i + 1}/${d.qs.length}</p><p class="desc" style="font-size:18px">${esc(q.q)}</p><div class="choices">${q.o.map(o => { const gone = m.rem.includes(o); const st = m.ans != null ? (o === q.a ? 'style="border-color:var(--good)"' : o === m.ans ? 'style="border-color:var(--bad)"' : '') : ''; return `<button class="choice ${gone ? 'dis' : ''}" ${st} data-act="${gone ? '' : 'mgans'}" data-v="${ea(o)}"><span class="l">•</span><span>${esc(o)}</span></button>`; }).join('')}</div>
   <div class="row" style="margin-top:12px">${m.ans != null ? `<button class="btn primary" data-act="mgnext">${t('Continue')}</button>` : (m.hints > 0 ? `<button class="btn small" data-act="mghint">💡 50/50 (${m.hints})</button>` : '')}</div><p class="small muted" style="margin:8px 0 0">${LANG === 'fr' ? 'Les cahiers, guides d\'étude et l\'aide donnent des indices.' : 'Study prep, notebooks and guides give you hints.'}</p>` + sk;
 }
+/* ---------- events ---------- */
 function showEvent() {
   const ev = E.buildEvent(S); if (!ev) { render(); return; }
   V.res = null;
@@ -916,6 +1011,7 @@ function afterEvent() {
   render();
   if (!S.over && S.phase === 'event') showEvent();
 }
+/* ---------- run records (stored in prefs.runs, used for achievements and memories of past runs) ---------- */
 function runRecord() {
   const kids = E.KIDS.slice().sort((a, b) => S.rel[b] - S.rel[a]); const en = S.ending ? E.ENDBY[S.ending.id] : null;
   return { id: S.ending ? S.ending.id : 'over', epi: S.ending ? S.ending.epi : [], over: S.ending ? 0 : 1, bad: (!S.ending || en.bad) ? 1 : 0, pop: S.pop, grade: S.grade, money: S.money, friends: kids.filter(n => S.rel[n] >= 40).slice(0, 3), foes: kids.slice().reverse().filter(n => S.rel[n] <= -25).slice(0, 3), cook: S.cookN || 0, sig: S.flags.COOKED_SIG ? 1 : 0, knife: S.perm['Cooking knife'] ? 1 : 0 };
@@ -940,7 +1036,7 @@ async function markEnding() {
   Store.put('auto', S);
 }
 
-/* ---------- tutorial, stats and achievements, starting traits ---------- */
+/* ---------- tutorial ---------- */
 const TUT = () => [
   { t: L('Your goal', 'Ton but'), b: L('Survive one school year, from Aug 28 to Jun 23. Keep <b>POP</b> (popularity) above 0: if it hits 0 the run ends at once. Otherwise you get an ending shaped by your stats, your friendships and the choices people remember.', 'Survivre à une année scolaire, du 28 août au 23 juin. Garde ta <b>POP</b> (popularité) au-dessus de 0 : si elle tombe à 0, la partie se termine tout de suite. Sinon tu obtiens une fin qui dépend de tes stats, de tes amitiés et des choix dont les gens se souviennent.') },
   { t: L('Every school day starts with an event', 'Chaque journée commence par un événement'), b: L('Read the scene and pick a choice. Some choices are checks (grades help), some are risky, and some are just kind. Keys <b>A, B, C…</b> or <b>1, 2, 3…</b> pick a choice.', 'Lis la scène et choisis. Certains choix sont des épreuves (tes notes aident), d\'autres sont risqués, d\'autres sont simplement gentils. Les touches <b>A, B, C…</b> ou <b>1, 2, 3…</b> choisissent.') },
@@ -960,6 +1056,7 @@ async function endTut() {
   if (f) showEvent(); else if (S) render();
 }
 
+/* ---------- starting traits ---------- */
 const TRAITS = () => [
   ['bal', L('Balanced', 'Équilibré'), L('The standard start.', 'Le départ habituel.'), { pop: 50, money: 50, grade: 55 }],
   ['sch', L('Scholar', 'Bûcheur'), L('Strong grades, less money and fewer admirers.', 'Bonnes notes, moins d\'argent et de popularité.'), { pop: 40, money: 30, grade: 70 }],
@@ -984,6 +1081,7 @@ function applyTrait(S, id, p, ngp) {
     S.ngBonus = 1;
   }
 }
+/* ---------- achievements & stats ---------- */
 const ACH = () => [
   ['first', L('First year', 'Première année'), L('Finish a run.', 'Terminer une partie.'), c => c.runs.length >= 1],
   ['survivor', L('Survivor', 'Survivant'), L('Reach the end of the school year.', 'Arriver à la fin de l\'année scolaire.'), c => c.runs.some(r => !r.over)],
@@ -1113,7 +1211,7 @@ function endingScreen() {
   <div class="row"><button class="btn primary" data-act="newgame2">${t('Play again')}</button><button class="btn" data-act="readj">📖 ${t('Journal')}</button><button class="btn" data-act="endbook">${t('Endings')}</button><button class="btn" data-act="summary">${L('Run summary', 'Résumé')}</button>${V.revealed ? `<button class="btn" data-act="notemc">${L('Note for MC', 'Mot pour MC')}</button>` : ''}${listenBtn()}<button class="btn ghost" data-act="saves0">${t('Load')}</button></div></div></div>`;
 }
 
-/* ---------- dialogs: saves, endings, help ---------- */
+/* ---------- dialogs: saved games, endings book ---------- */
 async function showSaves(fromTitle) {
   const m = await Store.metas();
   const row = (k, label) => {
@@ -1132,7 +1230,8 @@ async function showEndBook() {
 }
 
 
-/* ---------- the phone ---------- */
+/* ---------- phone ---------- */
+/* button labels for one-to-one texting actions [EN, FR] */
 const PHL = { chat_school: ['Chat about school', 'Parler de l\'école'], chat_hobbies: ['Chat about hobbies', 'Parler de loisirs'], chat_daily: ['Chat about daily life', 'Parler du quotidien'], chat_rumor: ['Ask what they heard', 'Demander ce qu\'ils ont entendu'], compliment: ['Send a compliment', 'Envoyer un compliment'], message: ['Say hi', 'Dire salut'], askhelp: ['Ask for help', 'Demander de l\'aide'], advice: ['Ask for advice', 'Demander conseil'], cheer: ['Cheer them up', 'Remonter le moral'], tease: ['Send a joke', 'Envoyer une blague'], askmoney: ['Ask to borrow money', 'Demander de l\'argent'], lend: ['Offer to lend $5', 'Proposer de prêter 5 $'], apologize: ['Say sorry', 'Présenter des excuses'], boundary: ['Set a boundary', 'Poser une limite'] };
 const unkOn = () => !!S && !S.over && S.di >= 3;
 const unkNew = () => unkOn() && !(S.phone && S.phone.unkSeen);
@@ -1285,7 +1384,7 @@ function showPhone(name) { if (!S || S.over) return; V.ph = { name: name || null
 function phScroll() { const th = document.getElementById('phthread'); if (th) th.scrollTop = th.scrollHeight; }
 function phDone(r) { if (r && r.err) { toast(r.err); } try { Store.autosave(S); } catch (e) {} render(); phScroll(); }
 
-/* ---------- run summary (for feedback) + note to MC ---------- */
+/* ---------- run summary (for feedback) & note for MC ---------- */
 async function summaryText() {
   const p = await Store.prefs(); const lines = [];
   lines.push('School Life Simulator — run summary (' + (LANG === 'fr' ? 'FR' : 'EN') + ')');
@@ -1321,6 +1420,7 @@ async function saveNote(clear) {
   const p = await Store.prefs(); Store.prefs(Object.assign({}, p, { note: v })); V.noteVal = v;
   toast(v ? L('The note is waiting on the first page.', 'Le mot attend sur la première page.') : L('Note removed.', 'Mot retiré.')); closeModal(); if (S) render();
 }
+/* ---------- settings & help ---------- */
 function showSettings() {
   openModal(() => {
     const fs = ['Normal', 'Large', 'Extra large'].map((n, i) => `<button class="btn ${PREF.fs === i ? 'primary' : ''}" data-act="fs" data-v="${i}" aria-pressed="${PREF.fs === i}">${t(n)}</button>`).join('');
@@ -1353,7 +1453,7 @@ function showHelp() {
   openModal(head(t('Help'), '') + (LANG === 'fr' ? fr : en) + `<p class="small" style="margin:12px 0 0">${inkHtml('k1', CLUES().k1)}</p><div class="row" style="margin-top:12px"><button class="btn" data-act="tutopen">${L('Replay the quick tour', 'Revoir la visite rapide')}</button></div>`);
 }
 
-/* ---------- actions ---------- */
+/* ---------- game start & people interactions ---------- */
 async function startNew() {
   const p = await Store.prefs(); const prev = p.name || ''; V.trait = 'bal'; V.ngpOn = false; const hasRuns = (p.runs || []).length > 0;
   const T = TRAITS(); const chips = T.map(x => `<button class="btn trait ${x[0] === 'bal' ? 'primary' : ''}" data-act="trait" data-v="${x[0]}" aria-pressed="${x[0] === 'bal'}">${x[1]}</button>`).join('');
@@ -1381,6 +1481,7 @@ function doInter(name, id, arg) {
 }
 function renderBehind() { render(); }
 
+/* ---------- click actions ---------- */
 async function onClick(e) {
   const b = e.target.closest('[data-act]'); if (!b) { if (e.target.id === 'ov' && V.modal && !V.evCur) closeModal(); return; }
   const a = b.dataset.act, v = b.dataset.v;
