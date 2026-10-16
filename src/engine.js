@@ -61,8 +61,27 @@ const NDAYS = () => DAYS.length;
 
 /* ---------- rng ---------- */
 function hash(s) { let h = 2166136261; s = String(s); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-function mul(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-function rnd(S) { S.rs = (S.rs + 0x6D2B79F5) | 0; let t = Math.imul(S.rs ^ S.rs >>> 15, 1 | S.rs); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+// mulberry32: the state advances by MUL_STEP, then mulOut() turns the new state into a number in [0, 1).
+const MUL_STEP = 0x6D2B79F5;
+function mulOut(a) {
+  let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
+// a local generator (does not touch S): used for things that must look random but stay
+// fixed for a given seed and day (who plays which role, quiz questions...)
+function mul(a) {
+  return function () {
+    a |= 0;
+    a = a + MUL_STEP | 0;
+    return mulOut(a);
+  };
+}
+// the game's main generator: advances S.rs, so every call changes what comes next
+function rnd(S) {
+  S.rs = (S.rs + MUL_STEP) | 0;
+  return mulOut(S.rs);
+}
 const ri = (S, a, b) => a + Math.floor(rnd(S) * (b - a + 1));
 const pick = (S, arr) => arr[Math.floor(rnd(S) * arr.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
