@@ -2053,8 +2053,8 @@ function viewJournal() {
     (LANG === 'fr'
       ? 'Journal<br>' + (myName() === 'MC' ? 'scolaire' : 'de ' + ea(myName()))
       : esc(myName() === 'MC' ? 'School Life' : myName() + "'s") + '<br>Journal') +
-    `</span><span class="sub">savepoint</span><span class="strap"></span>` +
-    `<span class="hint">${L('Tap to open', 'Touche pour ouvrir')}</span></button>`;
+    (`</span><span class="sub">savepoint</span><span class="strap"></span>` +
+      `<span class="hint">${L('Tap to open', 'Touche pour ouvrir')}</span></button>`);
   const back =
     `<div class="bcover${s > JS_MAX ? ' show' : ''}" id="bcover"><span class="stitch"></span>` +
     `<span class="ttl">${L('The End', 'Fin')}</span><span class="sub">${esc(myName())}, 2026–2027</span>` +
