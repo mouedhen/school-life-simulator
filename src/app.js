@@ -5626,21 +5626,69 @@ async function onClick(e) {
 
 /* ---------- keyboard ---------- */
 function onKey(e) {
-  const tg = e.target; const typing = tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA');
-  if (e.key === 'Enter' && tg && tg.id === 'pname') { beginGame(); return; }
+  const tg = e.target;
+  const typing = tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA');
+  if (e.key === 'Enter' && tg && tg.id === 'pname') {
+    beginGame();
+    return;
+  }
   if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.key === 'm' || e.key === 'M') { const mb = document.querySelector('[data-act=mute]'); if (mb) { e.preventDefault(); mb.click(); return; } }
-  const ov = document.getElementById('ov'); const k = e.key; const onBtn = tg && tg.tagName === 'BUTTON';
+  if (e.key === 'm' || e.key === 'M') {
+    const mb = document.querySelector('[data-act=mute]');
+    if (mb) {
+      e.preventDefault();
+      mb.click();
+      return;
+    }
+  }
+  const ov = document.getElementById('ov');
+  const k = e.key;
+  const onBtn = tg && tg.tagName === 'BUTTON';
   if (ov) {
-    if (k === 'Escape') { const x = ov.querySelector('[data-act=close]'); if (x) { e.preventDefault(); x.click(); } return; }
-    const ch = [...ov.querySelectorAll('.choice')]; const letter = k.length === 1 ? k.toUpperCase() : '';
-    if (ch.length && letter) { const idx = /[1-9]/.test(letter) ? +letter - 1 : 'ABCDEFG'.indexOf(letter); if (idx >= 0 && ch[idx]) { e.preventDefault(); ch[idx].click(); return; } }
-    if (k === 'Enter' && !onBtn) { const x = ov.querySelector('[data-act=evnext],[data-act=presback],[data-act=mgnext],[data-act=mgfinish]'); if (x) { e.preventDefault(); x.click(); } }
+    if (k === 'Escape') {
+      const x = ov.querySelector('[data-act=close]');
+      if (x) {
+        e.preventDefault();
+        x.click();
+      }
+      return;
+    }
+    const ch = [...ov.querySelectorAll('.choice')];
+    const letter = k.length === 1 ? k.toUpperCase() : '';
+    if (ch.length && letter) {
+      const idx = /[1-9]/.test(letter) ? +letter - 1 : 'ABCDEFG'.indexOf(letter);
+      if (idx >= 0 && ch[idx]) {
+        e.preventDefault();
+        ch[idx].click();
+        return;
+      }
+    }
+    if (k === 'Enter' && !onBtn) {
+      const x = ov.querySelector('[data-act=evnext],[data-act=presback],[data-act=mgnext],[data-act=mgfinish]');
+      if (x) {
+        e.preventDefault();
+        x.click();
+      }
+    }
     return;
   }
   if (!S) return;
-  if (V.tab === 'journal' && !(S.over || S.phase === 'ending')) { if (k === 'ArrowRight') { e.preventDefault(); jFlip(1); return; } if (k === 'ArrowLeft') { e.preventDefault(); jFlip(-1); return; } }
-  if (/^[1-7]$/.test(k) && !(S.over || S.phase === 'ending')) { const tabs = document.querySelectorAll('.nav [data-act=tab]'); if (tabs[+k - 1]) tabs[+k - 1].click(); }
+  if (V.tab === 'journal' && !(S.over || S.phase === 'ending')) {
+    if (k === 'ArrowRight') {
+      e.preventDefault();
+      jFlip(1);
+      return;
+    }
+    if (k === 'ArrowLeft') {
+      e.preventDefault();
+      jFlip(-1);
+      return;
+    }
+  }
+  if (/^[1-7]$/.test(k) && !(S.over || S.phase === 'ending')) {
+    const tabs = document.querySelectorAll('.nav [data-act=tab]');
+    if (tabs[+k - 1]) tabs[+k - 1].click();
+  }
 }
 
 /* ---------- boot ---------- */
