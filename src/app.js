@@ -1304,35 +1304,100 @@ function viewToday() {
 }
 /* ---------- journal: text ---------- */
 /* turns log entries ("Hang out — Maya Bennett") into first-person diary sentences */
-const DI = { 'Talk / ask about a topic': 'I had a long chat with {n} today.', 'Give a compliment': 'I told {n} something kind, and I meant it.', 'Hang out': '{n} and I hung out after school.', 'Invite to a group activity': 'I invited {n} to do something with a group.', 'Study together': '{n} and I studied together.', 'Ask for help': 'I asked {n} for a hand.', 'Ask for money': 'I asked {n} for some money. It felt awkward.', 'Offer to lend money': 'I offered to lend {n} some money.', 'Share a rumor': 'I passed a rumour on to {n}. Hmm.', 'Start a rumor': 'I started a rumour about {n}. I hope it never comes back to me.', 'Investigate a rumor': 'I looked into a rumour about {n}.', 'Defend someone': 'I stood up for {n}.', 'Apologize': 'I apologized to {n}.', 'Insult': 'I said something harsh to {n}. I am not proud of it.', 'Debate / challenge': '{n} and I got into a debate.', 'Harmless prank': 'I pulled a harmless prank on {n}.', 'Fight / confrontation': '{n} and I had a confrontation.', 'Set a boundary': 'I set a boundary with {n}.', 'Try to reconcile': 'I tried to make peace with {n}.', 'Share a secret': 'I told {n} a secret.', 'Ask for advice': 'I asked {n} for advice.', 'Sit together at lunch': 'I sat with {n} at lunch.', 'Send a message': 'I texted {n}.', 'Tease playfully': 'I teased {n}, just for fun.', 'Cheer them up': 'I tried to cheer {n} up.', 'Work on a project together': '{n} and I worked on a project together.', 'Ask to join their group': 'I asked to join {n}\'s group.' };
-const fn1 = n => /^(Ms|Mr|Mrs|Dr)\./.test(n) ? n : String(n).split(' ')[0];
-const me = x => String(x).replace(/\byou are\b/gi, 'I am').replace(/\byou (?=(previously|have|had|were|do|did|can|will|would|just|still|really|always|never|want|need|like|may|might|could|should)\b)/gi, 'I ').replace(/\b(someone|somebody|anyone|anybody|everyone|everybody|person|friend|classmate|people|those|what|whom|who|that|than|when|where|because|if|while|before|after|until|since|though) you\b/gi, '$1 I').replace(/\byourself\b/gi, 'myself').replace(/\byour\b/gi, 'my').replace(/\byou\b/gi, 'me').replace(/\bYou\b/g, 'I');
+const DI = {
+  'Talk / ask about a topic': 'I had a long chat with {n} today.',
+  'Give a compliment': 'I told {n} something kind, and I meant it.',
+  'Hang out': '{n} and I hung out after school.',
+  'Invite to a group activity': 'I invited {n} to do something with a group.',
+  'Study together': '{n} and I studied together.',
+  'Ask for help': 'I asked {n} for a hand.',
+  'Ask for money': 'I asked {n} for some money. It felt awkward.',
+  'Offer to lend money': 'I offered to lend {n} some money.',
+  'Share a rumor': 'I passed a rumour on to {n}. Hmm.',
+  'Start a rumor': 'I started a rumour about {n}. I hope it never comes back to me.',
+  'Investigate a rumor': 'I looked into a rumour about {n}.',
+  'Defend someone': 'I stood up for {n}.',
+  'Apologize': 'I apologized to {n}.',
+  'Insult': 'I said something harsh to {n}. I am not proud of it.',
+  'Debate / challenge': '{n} and I got into a debate.',
+  'Harmless prank': 'I pulled a harmless prank on {n}.',
+  'Fight / confrontation': '{n} and I had a confrontation.',
+  'Set a boundary': 'I set a boundary with {n}.',
+  'Try to reconcile': 'I tried to make peace with {n}.',
+  'Share a secret': 'I told {n} a secret.',
+  'Ask for advice': 'I asked {n} for advice.',
+  'Sit together at lunch': 'I sat with {n} at lunch.',
+  'Send a message': 'I texted {n}.',
+  'Tease playfully': 'I teased {n}, just for fun.',
+  'Cheer them up': 'I tried to cheer {n} up.',
+  'Work on a project together': '{n} and I worked on a project together.',
+  'Ask to join their group': "I asked to join {n}'s group.",
+};
+const fn1 = n => (/^(Ms|Mr|Mrs|Dr)\./.test(n) ? n : String(n).split(' ')[0]);
+const me = x =>
+  String(x)
+    .replace(/\byou are\b/gi, 'I am')
+    .replace(
+      /\byou (?=(previously|have|had|were|do|did|can|will|would|just|still|really|always|never|want|need|like|may|might|could|should)\b)/gi,
+      'I ',
+    )
+    .replace(
+      /\b(someone|somebody|anyone|anybody|everyone|everybody|person|friend|classmate|people|those|what|whom|who|that|than|when|where|because|if|while|before|after|until|since|though) you\b/gi,
+      '$1 I',
+    )
+    .replace(/\byourself\b/gi, 'myself')
+    .replace(/\byour\b/gi, 'my')
+    .replace(/\byou\b/gi, 'me')
+    .replace(/\bYou\b/g, 'I');
 const lc1 = x => x.charAt(0).toLowerCase() + x.slice(1);
 function diary(l) {
-  const x = l.t; let m;
+  const x = l.t;
+  let m;
   if ((m = x.match(/^(.+?) — (.+)$/)) && DI[m[1]]) return DI[m[1]].replace('{n}', fn1(m[2]));
-  if (m = x.match(/^Talked about (.+) with (.+)$/)) return 'I talked about ' + fn1(m[1]) + ' with ' + fn1(m[2]) + '. Maybe I should not have.';
+  if ((m = x.match(/^Talked about (.+) with (.+)$/)))
+    return 'I talked about ' + fn1(m[1]) + ' with ' + fn1(m[2]) + '. Maybe I should not have.';
   if (x === 'Studied after school') return 'I stayed behind to study. My head is full of notes.';
-  if (m = x.match(/^Cooked (.+) for (myself|the family|.+)$/)) return 'I cooked ' + (/^Mom/.test(m[1]) ? m[1] : lc1(m[1])) + ' for ' + (m[2] === 'myself' || m[2] === 'the family' ? m[2] : fn1(m[2])) + '. The kitchen smelled wonderful.';
-  if (m = x.match(/^Spent time with (.+?): (.+)$/)) return 'I spent time with ' + fn1(m[1]) + ': ' + lc1(m[2]) + '. It felt good to just be together.';
-  if (x === 'Riley\'s hidden card') return 'I opened Riley\'s card on the worst day. It said exactly what I needed to hear.';
-  if (m = x.match(/^Worked: (.+)$/)) return 'I worked a shift today (' + lc1(m[1]) + '). My feet hurt, but my wallet is happier.';
-  if (m = x.match(/^Met (.+)$/)) return 'I met ' + fn1(m[1]) + ' today. Maybe we will get along.';
-  if (m = x.match(/^Bought (.+)$/)) return 'I treated myself and bought ' + lc1(m[1]) + '.';
-  if (m = x.match(/^Used (.+)$/)) return 'I used my ' + lc1(m[1]) + '.';
-  if (m = x.match(/^Gave (.+) to (.+)$/)) return 'I gave ' + fn1(m[2]) + ' a ' + lc1(m[1]) + '. I hope they liked it.';
+  if ((m = x.match(/^Cooked (.+) for (myself|the family|.+)$/)))
+    return (
+      'I cooked ' +
+      (/^Mom/.test(m[1]) ? m[1] : lc1(m[1])) +
+      ' for ' +
+      (m[2] === 'myself' || m[2] === 'the family' ? m[2] : fn1(m[2])) +
+      '. The kitchen smelled wonderful.'
+    );
+  if ((m = x.match(/^Spent time with (.+?): (.+)$/)))
+    return 'I spent time with ' + fn1(m[1]) + ': ' + lc1(m[2]) + '. It felt good to just be together.';
+  if (x === "Riley's hidden card")
+    return "I opened Riley's card on the worst day. It said exactly what I needed to hear.";
+  if ((m = x.match(/^Worked: (.+)$/)))
+    return 'I worked a shift today (' + lc1(m[1]) + '). My feet hurt, but my wallet is happier.';
+  if ((m = x.match(/^Met (.+)$/))) return 'I met ' + fn1(m[1]) + ' today. Maybe we will get along.';
+  if ((m = x.match(/^Bought (.+)$/))) return 'I treated myself and bought ' + lc1(m[1]) + '.';
+  if ((m = x.match(/^Used (.+)$/))) return 'I used my ' + lc1(m[1]) + '.';
+  if ((m = x.match(/^Gave (.+) to (.+)$/)))
+    return 'I gave ' + fn1(m[2]) + ' a ' + lc1(m[1]) + '. I hope they liked it.';
   if (x === 'Ball — going alone') return 'The Ball: I decided to go on my own terms.';
-  if (m = x.match(/^Ball — (.+) accepted your invitation$/)) return fn1(m[1]) + ' said yes to the Ball! I am still smiling.';
-  if (m = x.match(/^Ball — (.+) declined$/)) return fn1(m[1]) + ' said no to the Ball. It stung a little.';
-  if (m = x.match(/^(.+) paid you back \$(\d+)$/)) return fn1(m[1]) + ' paid me back $' + m[2] + '. A promise kept.';
-  if (m = x.match(/^(.+) still has not paid you back\.$/)) return fn1(m[1]) + ' still has not paid me back.';
-  if (m = x.match(/^The Ball — (.+?) — (.+)$/)) {
-    if (LANG === 'fr') return 'Au bal (' + tr(m[1]).replace(/^./, c => c.toLowerCase()) + ') : ' + frDe(pk(["j'ai décidé de", "j'ai choisi de", "j'ai pris la décision de"], m[2]), frAct(m[2])) + '.';
-    const pre = ['I decided to', 'I chose to', 'I made up my mind to'][(m[2].length) % 3];
+  if ((m = x.match(/^Ball — (.+) accepted your invitation$/)))
+    return fn1(m[1]) + ' said yes to the Ball! I am still smiling.';
+  if ((m = x.match(/^Ball — (.+) declined$/))) return fn1(m[1]) + ' said no to the Ball. It stung a little.';
+  if ((m = x.match(/^(.+) paid you back \$(\d+)$/))) return fn1(m[1]) + ' paid me back $' + m[2] + '. A promise kept.';
+  if ((m = x.match(/^(.+) still has not paid you back\.$/))) return fn1(m[1]) + ' still has not paid me back.';
+  if ((m = x.match(/^The Ball — (.+?) — (.+)$/))) {
+    if (LANG === 'fr')
+      return (
+        'Au bal (' +
+        tr(m[1]).replace(/^./, c => c.toLowerCase()) +
+        ') : ' +
+        frDe(pk(["j'ai décidé de", "j'ai choisi de", "j'ai pris la décision de"], m[2]), frAct(m[2])) +
+        '.'
+      );
+    const pre = ['I decided to', 'I chose to', 'I made up my mind to'][m[2].length % 3];
     return 'At the Ball (' + lc1(m[1]) + '): ' + pre + ' ' + me(lc1(m[2])).replace(/\s*\([^)]*\)/g, '') + '.';
   }
-  if (m = x.match(/^(.+?) — (.+)$/)) {
-    const pre = ['Today I decided to', 'I chose to', 'In the end, I decided to', 'I made up my mind to'][(l.t.length + (l.t.charCodeAt(2) || 0)) % 4];
+  if ((m = x.match(/^(.+?) — (.+)$/))) {
+    const pre = ['Today I decided to', 'I chose to', 'In the end, I decided to', 'I made up my mind to'][
+      (l.t.length + (l.t.charCodeAt(2) || 0)) % 4
+    ];
     const c = me(lc1(m[2])).replace(/\s*\([^)]*\)/g, '');
     return m[1].replace(/[.:!?]+$/, '') + '. ' + pre + ' ' + c + '.';
   }
@@ -1342,75 +1407,240 @@ function diary(l) {
 const JN = () => E.DAYS.length + 5;
 const hsh = E.hash; // 32-bit FNV-1a of String(x), unsigned: the engine's hash (also used for avatars)
 const pk = (arr, seed) => arr[hsh(seed) % arr.length];
-const listJoin = a => a.length <= 1 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
-const OPEN = ['Another day at school.', 'I almost overslept this morning, and my hair shows it.', 'The hallway smelled like floor wax and pencil shavings.', 'It was one of those days where the clock moves slowly.', 'I woke up with a funny feeling about today.', 'My backpack feels heavier every week.', 'The bus was loud, as usual, and I had my window seat.', 'I packed my lunch twice and still forgot a spoon.', 'The sky was grey, which somehow made everything feel more important.', 'I can hardly believe how fast this year is going.'];
+const listJoin = a => (a.length <= 1 ? a[0] || '' : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]);
+const OPEN = [
+  'Another day at school.',
+  'I almost overslept this morning, and my hair shows it.',
+  'The hallway smelled like floor wax and pencil shavings.',
+  'It was one of those days where the clock moves slowly.',
+  'I woke up with a funny feeling about today.',
+  'My backpack feels heavier every week.',
+  'The bus was loud, as usual, and I had my window seat.',
+  'I packed my lunch twice and still forgot a spoon.',
+  'The sky was grey, which somehow made everything feel more important.',
+  'I can hardly believe how fast this year is going.',
+];
 const OPEN_MON = ['Monday again. My brain is still on the weekend.', 'Mondays are slow, but I got through it.'];
-const OPEN_FRI = ['Friday at last! Everyone in the hallway was lighter somehow.', 'It is Friday and the whole school feels like it is exhaling.'];
-const CLOSE_UP = ['I fell asleep smiling.', 'I think that was a good day.', 'I felt a little taller walking home.', 'I want to remember this one.', 'Today was kinder than I expected.'];
-const CLOSE_DN = ['I stared at the ceiling for a long time tonight.', 'I wish I could take part of today back.', 'I will try to do better tomorrow.', 'Sleep will not come easily tonight.', 'Some days sit heavy on my chest.'];
-const CLOSE_NEU = ['Tomorrow is another day.', 'Nothing dramatic. Sometimes that is a nice thing.', 'I am tired, in a good, ordinary way.', 'Time to rest. Tomorrow will come on its own.', 'Lights out. I will think about it in the morning.'];
-const TITLE_T = ['Today\'s big thing: {t}.', 'At school it was {t}.', '{t}. That was the main event today.', 'Today we had {t}.'];
+const OPEN_FRI = [
+  'Friday at last! Everyone in the hallway was lighter somehow.',
+  'It is Friday and the whole school feels like it is exhaling.',
+];
+const CLOSE_UP = [
+  'I fell asleep smiling.',
+  'I think that was a good day.',
+  'I felt a little taller walking home.',
+  'I want to remember this one.',
+  'Today was kinder than I expected.',
+];
+const CLOSE_DN = [
+  'I stared at the ceiling for a long time tonight.',
+  'I wish I could take part of today back.',
+  'I will try to do better tomorrow.',
+  'Sleep will not come easily tonight.',
+  'Some days sit heavy on my chest.',
+];
+const CLOSE_NEU = [
+  'Tomorrow is another day.',
+  'Nothing dramatic. Sometimes that is a nice thing.',
+  'I am tired, in a good, ordinary way.',
+  'Time to rest. Tomorrow will come on its own.',
+  'Lights out. I will think about it in the morning.',
+];
+const TITLE_T = [
+  "Today's big thing: {t}.",
+  'At school it was {t}.',
+  '{t}. That was the main event today.',
+  'Today we had {t}.',
+];
 function dayText(i) {
-  const date = E.DAYS[i].d; const L = S.log.filter(l => l.d === date);
+  const date = E.DAYS[i].d;
+  const L = S.log.filter(l => l.d === date);
   const wd = new Date(date + 'T12:00:00Z').getUTCDay();
-  const out = []; if (L.length < 3) out.push(wd === 1 && hsh(date) % 2 ? pk(OPEN_MON, date) : wd === 5 && hsh(date) % 2 ? pk(OPEN_FRI, date) : pk(OPEN, date));
-  { const ml = memLine(i); if (ml) out.push(ml); }
-  const pop = { v: 0 }, gr = { v: 0 }, mo = { v: 0 }; const rel = {}; let goss = 0, fl = [];
+  const out = [];
+  if (L.length < 3)
+    out.push(
+      wd === 1 && hsh(date) % 2 ? pk(OPEN_MON, date) : wd === 5 && hsh(date) % 2 ? pk(OPEN_FRI, date) : pk(OPEN, date),
+    );
+  {
+    const ml = memLine(i);
+    if (ml) out.push(ml);
+  }
+  const pop = { v: 0 },
+    gr = { v: 0 },
+    mo = { v: 0 };
+  const rel = {};
+  let goss = 0,
+    fl = [];
   L.forEach((l, li) => {
     if (li < 3) out.push(diaryDay(l));
-    (l.c || []).forEach(c => { if (c.k === 'pop') pop.v += c.v; else if (c.k === 'grade') gr.v += c.v; else if (c.k === 'money') mo.v += c.v; else if (c.k === 'rel') rel[c.n] = (rel[c.n] || 0) + c.v; else if (c.k === 'gossip') goss += c.v; });
+    (l.c || []).forEach(c => {
+      if (c.k === 'pop') pop.v += c.v;
+      else if (c.k === 'grade') gr.v += c.v;
+      else if (c.k === 'money') mo.v += c.v;
+      else if (c.k === 'rel') rel[c.n] = (rel[c.n] || 0) + c.v;
+      else if (c.k === 'gossip') goss += c.v;
+    });
   });
   if (!L.length) out.push('Nothing worth writing down happened. I just kept my head down and got through the day.');
-  const big = [], mid = [], sml = [], hurt = [], upset = [], cool = [];
-  Object.keys(rel).forEach(n => { const v = rel[n], f = fn1(n); if (v >= 8) big.push(f); else if (v >= 3) mid.push(f); else if (v > 0) sml.push(f); else if (v <= -8) hurt.push(f); else if (v <= -3) upset.push(f); else if (v < 0) cool.push(f); });
+  const big = [],
+    mid = [],
+    sml = [],
+    hurt = [],
+    upset = [],
+    cool = [];
+  Object.keys(rel).forEach(n => {
+    const v = rel[n],
+      f = fn1(n);
+    if (v >= 8) big.push(f);
+    else if (v >= 3) mid.push(f);
+    else if (v > 0) sml.push(f);
+    else if (v <= -8) hurt.push(f);
+    else if (v <= -3) upset.push(f);
+    else if (v < 0) cool.push(f);
+  });
   const eff = [];
   const cap = a => a.slice(0, 3);
   if (big.length) eff.push('I feel much closer to ' + listJoin(cap(big)) + ' now.');
   if (mid.length) eff.push('I became closer to ' + listJoin(cap(mid)) + '.');
-  if (sml.length) if (!big.length && !mid.length) eff.push(listJoin(cap(sml)) + (sml.length > 1 ? ' were' : ' was') + ' a little friendlier with me.');
+  if (sml.length)
+    if (!big.length && !mid.length)
+      eff.push(listJoin(cap(sml)) + (sml.length > 1 ? ' were' : ' was') + ' a little friendlier with me.');
   if (hurt.length) eff.push('I really hurt ' + listJoin(cap(hurt)) + ', and I know it.');
   if (upset.length) eff.push('I think I upset ' + listJoin(cap(upset)) + '.');
   if (cool.length && !hurt.length && !upset.length) eff.push(listJoin(cap(cool)) + ' seemed a bit cooler toward me.');
-  if (pop.v >= 4) eff.push('It felt like the whole class liked me more today.'); else if (pop.v > 0) eff.push('A few people noticed me, in a good way.'); else if (pop.v <= -4) eff.push('I could feel people pulling away from me.'); else if (pop.v < 0) eff.push('I think I lost a little standing today.');
-  if (gr.v >= 3) eff.push('My marks are climbing, and I can feel it.'); else if (gr.v > 0) eff.push('I actually learned something.'); else if (gr.v < 0) eff.push('My grades took a hit. Ugh.');
-  if (mo.v > 0) eff.push('I earned $' + mo.v + '.'); else if (mo.v < 0) eff.push('I spent $' + Math.abs(mo.v) + '.');
+  if (pop.v >= 4) eff.push('It felt like the whole class liked me more today.');
+  else if (pop.v > 0) eff.push('A few people noticed me, in a good way.');
+  else if (pop.v <= -4) eff.push('I could feel people pulling away from me.');
+  else if (pop.v < 0) eff.push('I think I lost a little standing today.');
+  if (gr.v >= 3) eff.push('My marks are climbing, and I can feel it.');
+  else if (gr.v > 0) eff.push('I actually learned something.');
+  else if (gr.v < 0) eff.push('My grades took a hit. Ugh.');
+  if (mo.v > 0) eff.push('I earned $' + mo.v + '.');
+  else if (mo.v < 0) eff.push('I spent $' + Math.abs(mo.v) + '.');
   if (goss) eff.push('I gossiped, and part of me regrets it.');
   if (eff.length > 3) eff.length = 3;
   const score = pop.v + gr.v + Object.keys(rel).reduce((a, n) => a + rel[n], 0);
-  const cl = L.length ? (score >= 4 ? pk(CLOSE_UP, date) : score <= -4 ? pk(CLOSE_DN, date) : pk(CLOSE_NEU, date)) : pk(CLOSE_NEU, date);
+  const cl = L.length
+    ? score >= 4
+      ? pk(CLOSE_UP, date)
+      : score <= -4
+        ? pk(CLOSE_DN, date)
+        : pk(CLOSE_NEU, date)
+    : pk(CLOSE_NEU, date);
   return { main: out, eff, cl };
 }
-const DEJA = ['I had the strangest feeling that I\'ve lived this day before.', 'Everything felt familiar, like a song I forgot I knew.', 'For a second I knew exactly what the teacher would say. Then it slipped away.', 'My hands moved before my head did, as if they remembered something.', 'It is like I have walked this hallway a hundred times on different feet.', 'I keep catching myself on the edge of a memory that is not mine.'];
-const FOEL = ['I keep wanting to apologize to {X} and I do not know why. We have hardly talked.', 'Something about {X} makes my stomach drop. I could not tell you what I did.', 'I looked at {X} and felt guilty, like I owe them something.'];
-const FRL = ['Being near {Y} feels like coming home, and we barely know each other yet.', 'I trust {Y}, and I cannot explain it. It feels earned somewhere else.'];
-const ENDB = ['There is a heavy feeling in my chest about how this year ends, like a dream that left a stain.', 'I am afraid of the last page of this year, and I do not know why.'];
-const ENDG = ['I have a quiet feeling that this year can end well, if I am careful.', 'Something in me says the end of this year is worth reaching.'];
-const PRES = ['Sometimes it feels like someone else is deciding, and I am only the hand that writes it down.', 'I get the sense I am being watched, gently. Like someone is waiting to see what I will choose.', 'There is a pause before every choice, as if someone out there is thinking it over.', 'I do not think I am the only one in this diary.'];
-const DIRL = ['If you are out there, the one who picks for me: be kind to me. I am trying to be kind to them.', 'You keep coming back. I do not know who you are, but I am glad you do.', 'Whoever you are, I want you to know none of this is your fault, and all of it matters.', 'I notice when you hesitate. Thank you for taking your time with me.'];
+const DEJA = [
+  "I had the strangest feeling that I've lived this day before.",
+  'Everything felt familiar, like a song I forgot I knew.',
+  'For a second I knew exactly what the teacher would say. Then it slipped away.',
+  'My hands moved before my head did, as if they remembered something.',
+  'It is like I have walked this hallway a hundred times on different feet.',
+  'I keep catching myself on the edge of a memory that is not mine.',
+];
+const FOEL = [
+  'I keep wanting to apologize to {X} and I do not know why. We have hardly talked.',
+  'Something about {X} makes my stomach drop. I could not tell you what I did.',
+  'I looked at {X} and felt guilty, like I owe them something.',
+];
+const FRL = [
+  'Being near {Y} feels like coming home, and we barely know each other yet.',
+  'I trust {Y}, and I cannot explain it. It feels earned somewhere else.',
+];
+const ENDB = [
+  'There is a heavy feeling in my chest about how this year ends, like a dream that left a stain.',
+  'I am afraid of the last page of this year, and I do not know why.',
+];
+const ENDG = [
+  'I have a quiet feeling that this year can end well, if I am careful.',
+  'Something in me says the end of this year is worth reaching.',
+];
+const PRES = [
+  'Sometimes it feels like someone else is deciding, and I am only the hand that writes it down.',
+  'I get the sense I am being watched, gently. Like someone is waiting to see what I will choose.',
+  'There is a pause before every choice, as if someone out there is thinking it over.',
+  'I do not think I am the only one in this diary.',
+];
+const DIRL = [
+  'If you are out there, the one who picks for me: be kind to me. I am trying to be kind to them.',
+  'You keep coming back. I do not know who you are, but I am glad you do.',
+  'Whoever you are, I want you to know none of this is your fault, and all of it matters.',
+  'I notice when you hesitate. Thank you for taking your time with me.',
+];
 function memLine(i) {
-  if (i === 0 && S.note) return 'On the first page, in handwriting that is not mine, someone left a line: “' + S.note + '” I read it twice. It felt like being looked after.';
-  const m = S.mem; if (!m) return null; const date = E.DAYS[i].d; const last = E.DAYS.length - 1;
+  if (i === 0 && S.note)
+    return (
+      'On the first page, in handwriting that is not mine, someone left a line: “' +
+      S.note +
+      '” I read it twice. It felt like being looked after.'
+    );
+  const m = S.mem;
+  if (!m) return null;
+  const date = E.DAYS[i].d;
+  const last = E.DAYS.length - 1;
   if (i === 0) return 'Today felt like a second try at something, though I could not say what.';
   if (i === last) return 'I have a feeling I have stood at this last bell before.';
   if (hsh(S.seed + 'm' + i) % 11 !== 0) return null;
-  const pools = [DEJA, DEJA]; if (m.foes.length) pools.push(FOEL); if (m.friends.length) pools.push(FRL); pools.push(m.last.bad ? ENDB : ENDG);
-  if (m.n >= 2) pools.push(PRES, PRES); if (m.n >= 3) pools.push(DIRL, DIRL);
+  const pools = [DEJA, DEJA];
+  if (m.foes.length) pools.push(FOEL);
+  if (m.friends.length) pools.push(FRL);
+  pools.push(m.last.bad ? ENDB : ENDG);
+  if (m.n >= 2) pools.push(PRES, PRES);
+  if (m.n >= 3) pools.push(DIRL, DIRL);
   const pool = pools[hsh(date + 'p') % pools.length];
-  return pk(pool, date + 'q').replace('{X}', fn1(pk(m.foes.length ? m.foes : ['someone'], date))).replace('{Y}', fn1(pk(m.friends.length ? m.friends : ['someone'], date + 'y')));
+  return pk(pool, date + 'q')
+    .replace('{X}', fn1(pk(m.foes.length ? m.foes : ['someone'], date)))
+    .replace('{Y}', fn1(pk(m.friends.length ? m.friends : ['someone'], date + 'y')));
 }
-const FR_TT = ['Le gros événement du jour : {t}.', "À l'école, c'était {t}.", "{t}. C'était l'événement principal aujourd'hui.", "Aujourd'hui, au programme : {t}."];
-const FR_PRE = ["Aujourd'hui, j'ai décidé de", "J'ai choisi de", "Au final, j'ai décidé de", "J'ai pris la décision de"];
-const frYou = x => x.replace(/\bs'/gi, "m'").replace(/\bse /gi, 'me ').replace(/\bsoi\b/gi, 'moi').replace(/\btu es\b/gi, 'je suis').replace(/\btu as\b/gi, "j'ai").replace(/\bt'/gi, "m'").replace(/\btu\b/gi, 'je').replace(/\bton\b/gi, 'mon').replace(/\bta\b/gi, 'ma').replace(/\btes\b/gi, 'mes').replace(/\bte\b/gi, 'me').replace(/\btoi\b/gi, 'moi').replace(/\bvotre\b/gi, 'mon');
-const frDe = (pre, c) => /^[aeiouyéèêàâîôûhAEIOUYÉ]/.test(c) ? pre.replace(/de$/, "d'") + c : pre + ' ' + c;
-const frAct = x => frYou(tr(x)).replace(/\s*\([^)]*\)/g, '').replace(/[.\s]+$/, '').replace(/^./, c => c.toLowerCase());
+const FR_TT = [
+  'Le gros événement du jour : {t}.',
+  "À l'école, c'était {t}.",
+  "{t}. C'était l'événement principal aujourd'hui.",
+  "Aujourd'hui, au programme : {t}.",
+];
+const FR_PRE = [
+  "Aujourd'hui, j'ai décidé de",
+  "J'ai choisi de",
+  "Au final, j'ai décidé de",
+  "J'ai pris la décision de",
+];
+const frYou = x =>
+  x
+    .replace(/\bs'/gi, "m'")
+    .replace(/\bse /gi, 'me ')
+    .replace(/\bsoi\b/gi, 'moi')
+    .replace(/\btu es\b/gi, 'je suis')
+    .replace(/\btu as\b/gi, "j'ai")
+    .replace(/\bt'/gi, "m'")
+    .replace(/\btu\b/gi, 'je')
+    .replace(/\bton\b/gi, 'mon')
+    .replace(/\bta\b/gi, 'ma')
+    .replace(/\btes\b/gi, 'mes')
+    .replace(/\bte\b/gi, 'me')
+    .replace(/\btoi\b/gi, 'moi')
+    .replace(/\bvotre\b/gi, 'mon');
+const frDe = (pre, c) => (/^[aeiouyéèêàâîôûhAEIOUYÉ]/.test(c) ? pre.replace(/de$/, "d'") + c : pre + ' ' + c);
+const frAct = x =>
+  frYou(tr(x))
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/[.\s]+$/, '')
+    .replace(/^./, c => c.toLowerCase());
 function diaryDay(l) {
-  const x = l.t; let m;
-  if (LANG === 'fr' && (m = x.match(/^(.+?) — (.+)$/)) && !DI[m[1]] && !/^Ball$/.test(m[1]) && !/^The Ball$/.test(m[1])) {
+  const x = l.t;
+  let m;
+  if (
+    LANG === 'fr' &&
+    (m = x.match(/^(.+?) — (.+)$/)) &&
+    !DI[m[1]] &&
+    !/^Ball$/.test(m[1]) &&
+    !/^The Ball$/.test(m[1])
+  ) {
     const ttl = tr(m[1].replace(/[.:!?]+$/, ''));
     return pk(FR_TT, x).replace('{t}', ttl) + ' ' + frDe(pk(FR_PRE, x + 'f'), frAct(m[2])) + '.';
   }
   if ((m = x.match(/^(.+?) — (.+)$/)) && !DI[m[1]] && !/^Ball$/.test(m[1]) && !/^The Ball$/.test(m[1])) {
-    const c = me(lc1(m[2])).replace(/\s*\([^)]*\)/g, '').replace(/[.\s]+$/, '');
+    const c = me(lc1(m[2]))
+      .replace(/\s*\([^)]*\)/g, '')
+      .replace(/[.\s]+$/, '');
     const ttl = m[1].replace(/[.:!?]+$/, '');
     const pre = pk(['Today I decided to', 'I chose to', 'In the end, I decided to', 'I made up my mind to'], x);
     return pk(TITLE_T, x).replace('{t}', ttl) + ' ' + pre + ' ' + c + '.';
