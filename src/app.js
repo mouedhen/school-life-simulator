@@ -2817,10 +2817,29 @@ function viewCal() {
 
 /* ---------- Menu tab ---------- */
 function viewMenu() {
-  return `<div class="card"><h3>${t('Menu')}</h3><div class="row" style="margin-top:8px"><button class="btn" data-act="saves">${t('Saved games')}</button><button class="btn" data-act="endbook">${t('Endings')}</button><button class="btn" data-act="summary">${L('Run summary', 'Résumé')}</button>${noteMcBtn()}<button class="btn" data-act="stats">${L('Stats', 'Statistiques')}</button><button class="btn" data-act="settings">${t('Settings')}</button><button class="btn" data-act="help">${t('Help')}</button></div>
-  <div class="row" style="margin-top:12px">${themeBtn('btn ghost')}${langBtn('btn ghost')}<button class="btn ghost" data-act="newgame">${t('New game')}</button></div></div>
-  <div class="card"><h3>${t('Account')}</h3><p class="muted small" style="margin:0">${Store.cloud ? L('Your saves are tied to your Claude account and follow you across devices.', 'Tes sauvegardes sont liées à ton compte Claude et te suivent d\'un appareil à l\'autre.') : L('Not signed in here: saves stay in this browser only.', 'Mode hors compte : les sauvegardes restent dans ce navigateur.')}${Store.cloudErr ? ' (cloud save failed once)' : ''}</p></div>
-  <div class="card"><h3>${t('Final stats')}</h3>${statBoxes()}</div>`;
+  return (
+    `<div class="card"><h3>${t('Menu')}</h3><div class="row" style="margin-top:8px">` +
+    `<button class="btn" data-act="saves">${t('Saved games')}</button>` +
+    `<button class="btn" data-act="endbook">${t('Endings')}</button>` +
+    `<button class="btn" data-act="summary">${L('Run summary', 'Résumé')}</button>${noteMcBtn()}` +
+    `<button class="btn" data-act="stats">${L('Stats', 'Statistiques')}</button>` +
+    `<button class="btn" data-act="settings">${t('Settings')}</button>` +
+    `<button class="btn" data-act="help">${t('Help')}</button></div>\n  ` +
+    `<div class="row" style="margin-top:12px">${themeBtn('btn ghost')}${langBtn('btn ghost')}` +
+    `<button class="btn ghost" data-act="newgame">${t('New game')}</button></div></div>\n  ` +
+    `<div class="card"><h3>${t('Account')}</h3><p class="muted small" style="margin:0">` +
+    (Store.cloud
+      ? L(
+          'Your saves are tied to your Claude account and follow you across devices.',
+          "Tes sauvegardes sont liées à ton compte Claude et te suivent d'un appareil à l'autre.",
+        )
+      : L(
+          'Not signed in here: saves stay in this browser only.',
+          'Mode hors compte : les sauvegardes restent dans ce navigateur.',
+        )) +
+    `${Store.cloudErr ? ' (cloud save failed once)' : ''}</p></div>\n  <div class="card">` +
+    `<h3>${t('Final stats')}</h3>${statBoxes()}</div>`
+  );
 }
 
 /* ---------- modals ---------- */
