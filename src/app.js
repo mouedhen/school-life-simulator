@@ -2555,8 +2555,8 @@ function viewShop() {
         perms
           .map(
             k =>
-              `<div class="card" style="margin:0;padding:9px"><span class="ico">${itemIcon(k, 'perm')}</span> ` +
-              `<b>${esc(tr(k))}</b><div class="small muted">Permanent</div></div>`,
+              `<div class="card" style="margin:0;padding:9px"><span class="ico">${itemIcon(k, 'perm')}` +
+              `</span> <b>${esc(tr(k))}</b><div class="small muted">Permanent</div></div>`,
           )
           .join('') +
         `</div>`
