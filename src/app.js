@@ -1078,12 +1078,11 @@ function hud() {
     `<div class="sub">${t('Day')} ${S.di + 1} ${t('of')} ${DAYS.length}</div></div>\n  <div class="hr">` +
     `<button class="mute phbtn${E.phoneOff(S) ? ' off' : ''}" data-act="phone" aria-label="${L('Phone', 'Téléphone')}">📱${phBadge()}` +
     `</button>` +
-    `<button class="mute" data-act="mute" aria-pressed="${!!PREF.muted}"` +
-    ` aria-label="${L('Mute all sound', 'Couper tout le son')}">${PREF.muted ? '🔇' : '🔊'}</button>` +
-    `<div class="money">$${S.money}</div></div></div>\n  <div class="bars"><div class="bar">` +
-    `<div class="lab"><span>${t('POP')}</span><b>${S.pop}/100</b></div><div class="track">` +
-    `<div class="fill pop ${low ? 'low' : ''}" style="width:${S.pop}%"></div></div></div>\n  ` +
-    `<div class="bar"><div class="lab"><span>${t('Grade')}</span><b>${S.grade}</b></div>` +
+    `<button class="mute" data-act="mute" aria-pressed="${!!PREF.muted}" aria-label="${L('Mute all sound', 'Couper tout le son')}">` +
+    `${PREF.muted ? '🔇' : '🔊'}</button><div class="money">$${S.money}</div></div></div>\n  ` +
+    `<div class="bars"><div class="bar"><div class="lab"><span>${t('POP')}</span><b>${S.pop}/100</b>` +
+    `</div><div class="track"><div class="fill pop ${low ? 'low' : ''}" style="width:${S.pop}%"></div>` +
+    `</div></div>\n  <div class="bar"><div class="lab"><span>${t('Grade')}</span><b>${S.grade}</b></div>` +
     `<div class="track"><div class="fill grade" style="width:${S.grade}%"></div></div></div><div></div>` +
     `</div>\n  ` +
     (S.phase === 'free' ? `<div class="blocks"><span>${t('Time blocks')}</span>${pips}</div>` : '') +
