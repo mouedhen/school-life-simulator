@@ -5,6 +5,7 @@ Run everything from the project root after `python3 build.py` (the UI tests read
 | Command | What it checks |
 | --- | --- |
 | `node tests/engine_smoke.js` | Engine only: 40 seeded years run without errors; NPC acts, family "notice" scenes and the one-time reveal fire as designed; follow-ups (apology/echo), loans and gift tracking work. |
+| `node tests/golden.js` | Golden master for refactoring: 160 seeded bot years (kind, mean, mixed, hermit; phone on for odd seeds) fingerprint every event, action result, UI list and the final state. Must print `OK` after a pure refactor. Only after a deliberate gameplay change: `node tests/golden.js record`, and commit the new `golden.json`. |
 | `node tests/endings_cov.js 600` | Ending coverage and average money/pop/grade. Run with `NO_NPC=1` to compare with the NPC acts switched off (expected: within about 1 point, same ending count). |
 | `python3 tests/ui_smoke.py en` / `fr` | Browser (Playwright): plays 120 days, checks NPC encounters, faint ink hover/persistence, the blot hint, notice and reveal scenes, Settings/Help/Stats ink lines, no page errors. |
 | `python3 tests/stress.py en 1 4` | Full-year bot runs through the real UI (seed range), fails on any page error or if no ending is reached. Use `fr` for French. |
