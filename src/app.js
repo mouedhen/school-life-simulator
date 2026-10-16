@@ -2614,12 +2614,10 @@ function familyHtml() {
       return (
         `<div class="card item" style="margin:0"><div class="top"><span>${esc(n)}${has ? ' 🎁' : ''}</span>` +
         `<span class="price">${S.rel[n]}</span></div>` +
-        `<div` +
-        ` class="muted small">${relT(E.relLabel(S.rel[n]))} · ${n1}/5 ${L('activities', 'activités')}${has ? ' · ' + esc(tr(B.item)) : ''}` +
-        `</div><div class="row">` +
-        `<button class="btn small" data-act="bond"` +
-        ` data-v="${ea(n)}" ${S.phase === 'free' ? '' : 'disabled'}>${L('Spend time', 'Passer du temps')}` +
-        `</button></div></div>`
+        `<div class="muted small">${relT(E.relLabel(S.rel[n]))} · ${n1}/5 ${L('activities', 'activités')}` +
+        `${has ? ' · ' + esc(tr(B.item)) : ''}</div><div class="row">` +
+        `<button class="btn small" data-act="bond" data-v="${ea(n)}" ${S.phase === 'free' ? '' : 'disabled'}>` +
+        `${L('Spend time', 'Passer du temps')}</button></div></div>`
       );
     })
     .join('');
@@ -2629,8 +2627,8 @@ function familyHtml() {
       'Each family member has activities that open up as you grow closer. Reach 100 with someone and they may give you something special.',
       "Chaque membre de la famille a des activités qui s'ouvrent à mesure que vous vous rapprochez. À 100 avec quelqu'un, il pourrait te donner un objet spécial.",
     ) +
-    `</p><p class="small" style="margin:6px 0 0">${inkHtml('k6', CLUES().k6)}</p></div>` +
-    `<div class="grid2" style="grid-template-columns:1fr;margin-bottom:14px">${rows}</div>`
+    (`</p><p class="small" style="margin:6px 0 0">${inkHtml('k6', CLUES().k6)}</p></div>` +
+      `<div class="grid2" style="grid-template-columns:1fr;margin-bottom:14px">${rows}</div>`)
   );
 }
 function showBond(who) {
@@ -2693,9 +2691,8 @@ function viewWork() {
         return (
           `<div class="card item" style="margin:0"><div class="top"><span>${esc(j.n)}</span>` +
           `<span class="price">$${j.pay}</span></div>` +
-          `<div` +
-          ` class="muted small">${j.blocks} ${j.blocks > 1 ? t('blocks') : t('block')} · ${esc(j.note || '')}${j.need ? ' · ' + t('Needs') + ' ' + esc(j.need) : ''}` +
-          `</div><div class="row">` +
+          `<div class="muted small">${j.blocks} ${j.blocks > 1 ? t('blocks') : t('block')} · ${esc(j.note || '')}` +
+          `${j.need ? ' · ' + t('Needs') + ' ' + esc(j.need) : ''}</div><div class="row">` +
           `<button class="btn small" data-act="work" data-v="${j.id}" ${can ? '' : 'disabled'}>${t('Do it')}` +
           `</button></div></div>`
         );
