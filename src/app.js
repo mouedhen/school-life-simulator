@@ -3211,22 +3211,80 @@ async function markEnding() {
 
 /* ---------- tutorial ---------- */
 const TUT = () => [
-  { t: L('Your goal', 'Ton but'), b: L('Survive one school year, from Aug 28 to Jun 23. Keep <b>POP</b> (popularity) above 0: if it hits 0 the run ends at once. Otherwise you get an ending shaped by your stats, your friendships and the choices people remember.', 'Survivre à une année scolaire, du 28 août au 23 juin. Garde ta <b>POP</b> (popularité) au-dessus de 0 : si elle tombe à 0, la partie se termine tout de suite. Sinon tu obtiens une fin qui dépend de tes stats, de tes amitiés et des choix dont les gens se souviennent.') },
-  { t: L('Every school day starts with an event', 'Chaque journée commence par un événement'), b: L('Read the scene and pick a choice. Some choices are checks (grades help), some are risky, and some are just kind. Keys <b>A, B, C…</b> or <b>1, 2, 3…</b> pick a choice.', 'Lis la scène et choisis. Certains choix sont des épreuves (tes notes aident), d\'autres sont risqués, d\'autres sont simplement gentils. Les touches <b>A, B, C…</b> ou <b>1, 2, 3…</b> choisissent.') },
-  { t: L('After school: 3 time blocks', 'Après les cours : 3 blocs de temps'), b: L('Each action (talking, studying, working, shopping) uses a block. When you are done, press <b>End day</b>. Surprises, personal events and birthdays can happen in the evening.', 'Chaque action (parler, étudier, travailler, magasiner) utilise un bloc. Quand tu as fini, appuie sur <b>Finir la journée</b>. Des imprévus, des événements personnels et des anniversaires peuvent survenir le soir.') },
-  { t: L('People, Shop, Work, Calendar', 'Gens, boutique, travail, calendrier'), b: L('<b>People</b>: 40 characters, each with a relationship from −100 to +100. Talk, share, tease, give gifts. <b>Shop</b> and <b>Work</b> change your money and your options. <b>Calendar</b> shows holidays, birthdays and big days.', '<b>Gens</b> : 40 personnages, chacun avec une relation de −100 à +100. Parle, confie-toi, taquine, offre des cadeaux. La <b>boutique</b> et le <b>travail</b> changent ton argent et tes options. Le <b>calendrier</b> montre les congés, les anniversaires et les grands jours.') },
-  { t: L('Risks and memory', 'Risques et mémoire'), b: L('Cheating can get you caught. Rumors can reach their target, get disproven, and cost popularity. People remember what you did, and helping or hurting someone also moves their friends a little.', 'Tricher peut te faire prendre. Les rumeurs peuvent atteindre leur cible, être démenties, et te coûter de la popularité. Les gens se souviennent de ce que tu as fait, et aider ou blesser quelqu\'un touche aussi un peu ses amis.') },
-  { t: L('Journal, saving, sound', 'Journal, sauvegarde, son'), b: L('Your <b>Journal</b> writes itself as you play. The game autosaves; <b>Menu → Saved games</b> has 3 manual slots. Press <b>M</b> or tap 🔊 to mute everything; <b>Settings</b> has volume sliders, text size and more.', 'Ton <b>journal</b> s\'écrit tout seul pendant que tu joues. Le jeu se sauvegarde automatiquement ; <b>Menu → Parties sauvegardées</b> offre 3 emplacements manuels. Appuie sur <b>M</b> ou touche 🔊 pour tout couper ; les <b>Réglages</b> ont des curseurs de volume, la taille du texte et plus.') },
+  {
+    t: L('Your goal', 'Ton but'),
+    b: L(
+      'Survive one school year, from Aug 28 to Jun 23. Keep <b>POP</b> (popularity) above 0: if it hits 0 the run ends at once. Otherwise you get an ending shaped by your stats, your friendships and the choices people remember.',
+      'Survivre à une année scolaire, du 28 août au 23 juin. Garde ta <b>POP</b> (popularité) au-dessus de 0 : si elle tombe à 0, la partie se termine tout de suite. Sinon tu obtiens une fin qui dépend de tes stats, de tes amitiés et des choix dont les gens se souviennent.',
+    ),
+  },
+  {
+    t: L('Every school day starts with an event', 'Chaque journée commence par un événement'),
+    b: L(
+      'Read the scene and pick a choice. Some choices are checks (grades help), some are risky, and some are just kind. Keys <b>A, B, C…</b> or <b>1, 2, 3…</b> pick a choice.',
+      "Lis la scène et choisis. Certains choix sont des épreuves (tes notes aident), d'autres sont risqués, d'autres sont simplement gentils. Les touches <b>A, B, C…</b> ou <b>1, 2, 3…</b> choisissent.",
+    ),
+  },
+  {
+    t: L('After school: 3 time blocks', 'Après les cours : 3 blocs de temps'),
+    b: L(
+      'Each action (talking, studying, working, shopping) uses a block. When you are done, press <b>End day</b>. Surprises, personal events and birthdays can happen in the evening.',
+      'Chaque action (parler, étudier, travailler, magasiner) utilise un bloc. Quand tu as fini, appuie sur <b>Finir la journée</b>. Des imprévus, des événements personnels et des anniversaires peuvent survenir le soir.',
+    ),
+  },
+  {
+    t: L('People, Shop, Work, Calendar', 'Gens, boutique, travail, calendrier'),
+    b: L(
+      '<b>People</b>: 40 characters, each with a relationship from −100 to +100. Talk, share, tease, give gifts. <b>Shop</b> and <b>Work</b> change your money and your options. <b>Calendar</b> shows holidays, birthdays and big days.',
+      '<b>Gens</b> : 40 personnages, chacun avec une relation de −100 à +100. Parle, confie-toi, taquine, offre des cadeaux. La <b>boutique</b> et le <b>travail</b> changent ton argent et tes options. Le <b>calendrier</b> montre les congés, les anniversaires et les grands jours.',
+    ),
+  },
+  {
+    t: L('Risks and memory', 'Risques et mémoire'),
+    b: L(
+      'Cheating can get you caught. Rumors can reach their target, get disproven, and cost popularity. People remember what you did, and helping or hurting someone also moves their friends a little.',
+      "Tricher peut te faire prendre. Les rumeurs peuvent atteindre leur cible, être démenties, et te coûter de la popularité. Les gens se souviennent de ce que tu as fait, et aider ou blesser quelqu'un touche aussi un peu ses amis.",
+    ),
+  },
+  {
+    t: L('Journal, saving, sound', 'Journal, sauvegarde, son'),
+    b: L(
+      'Your <b>Journal</b> writes itself as you play. The game autosaves; <b>Menu → Saved games</b> has 3 manual slots. Press <b>M</b> or tap 🔊 to mute everything; <b>Settings</b> has volume sliders, text size and more.',
+      "Ton <b>journal</b> s'écrit tout seul pendant que tu joues. Le jeu se sauvegarde automatiquement ; <b>Menu → Parties sauvegardées</b> offre 3 emplacements manuels. Appuie sur <b>M</b> ou touche 🔊 pour tout couper ; les <b>Réglages</b> ont des curseurs de volume, la taille du texte et plus.",
+    ),
+  },
 ];
 const tutHtml = () => {
-  const T = TUT(), i = V.tut, st = T[i];
-  return head(L('Quick tour', 'Visite rapide'), `<span class="tag">${i + 1}/${T.length}</span>`) + `<div class="lines"><p><b>${st.t}</b></p><p>${st.b}</p></div><div class="tutdots" aria-hidden="true">${T.map((_, k) => `<span class="${k === i ? 'on' : ''}"></span>`).join('')}</div><div class="row" style="margin-top:14px">${i > 0 ? `<button class="btn ghost" data-act="tutprev">${L('Back', 'Retour')}</button>` : ''}<button class="btn primary" data-act="tutnext">${i === T.length - 1 ? L('Start playing', 'Jouer') : L('Next', 'Suivant')}</button><button class="btn ghost" data-act="tutskip">${L('Skip', 'Passer')}</button></div>`;
+  const T = TUT(),
+    i = V.tut,
+    st = T[i];
+  return (
+    head(L('Quick tour', 'Visite rapide'), `<span class="tag">${i + 1}/${T.length}</span>`) +
+    (`<div class="lines"><p><b>${st.t}</b></p><p>${st.b}</p></div><div class="tutdots" aria-hidden="true">` +
+      T.map((_, k) => `<span class="${k === i ? 'on' : ''}"></span>`).join('') +
+      `</div><div class="row" style="margin-top:14px">` +
+      (i > 0 ? `<button class="btn ghost" data-act="tutprev">${L('Back', 'Retour')}</button>` : '') +
+      `<button class="btn primary" data-act="tutnext">` +
+      (i === T.length - 1 ? L('Start playing', 'Jouer') : L('Next', 'Suivant')) +
+      `</button><button class="btn ghost" data-act="tutskip">${L('Skip', 'Passer')}</button></div>`)
+  );
 };
-function startTut(first) { V.tut = 0; V.tutFirst = !!first; openModal(tutHtml); }
+function startTut(first) {
+  V.tut = 0;
+  V.tutFirst = !!first;
+  openModal(tutHtml);
+}
 async function endTut() {
-  const f = V.tutFirst; V.tut = null; V.tutFirst = false; closeModal();
-  try { const p = await Store.prefs(); if (!p.tut) Store.prefs(Object.assign({}, p, { tut: 1 })); } catch (e) {}
-  if (f) showEvent(); else if (S) render();
+  const f = V.tutFirst;
+  V.tut = null;
+  V.tutFirst = false;
+  closeModal();
+  try {
+    const p = await Store.prefs();
+    if (!p.tut) Store.prefs(Object.assign({}, p, { tut: 1 }));
+  } catch (e) {}
+  if (f) showEvent();
+  else if (S) render();
 }
 
 /* ---------- starting traits ---------- */
