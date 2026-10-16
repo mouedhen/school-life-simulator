@@ -2909,32 +2909,125 @@ const head = (title, tag) =>
 function newMg(ev) {
   const def = E.quiz(S, ev.title);
   if (def.type === 'quiz') return { def, i: 0, ok: 0, ans: null, rem: [], hints: def.hints, done: false };
-  let a = def.seed >>> 0; const rnd = () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 4294967296; };
-  const em = ['🍎', '🎨', '⚽', '📚']; const cards = em.concat(em); for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]]; }
+  let a = def.seed >>> 0;
+  const rnd = () => {
+    a = (a * 1664525 + 1013904223) >>> 0;
+    return a / 4294967296;
+  };
+  const em = ['🍎', '🎨', '⚽', '📚'];
+  const cards = em.concat(em);
+  for (let i = cards.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [cards[i], cards[j]] = [cards[j], cards[i]];
+  }
   return { def, cards, flipped: [], matched: [], misses: 0, lock: false, done: false };
 }
 function mgFlip(i) {
-  const m = V.mg; if (!m || m.lock || m.matched.includes(i) || m.flipped.includes(i)) return;
+  const m = V.mg;
+  if (!m || m.lock || m.matched.includes(i) || m.flipped.includes(i)) return;
   m.flipped.push(i);
   if (m.flipped.length === 2) {
     const [x, y] = m.flipped;
-    if (m.cards[x] === m.cards[y]) { m.matched.push(x, y); m.flipped = []; if (m.matched.length === m.cards.length) m.done = true; }
-    else { m.misses++; m.lock = true; setTimeout(() => { if (V.mg === m) { m.flipped = []; m.lock = false; renderModal(); } }, 650); }
+    if (m.cards[x] === m.cards[y]) {
+      m.matched.push(x, y);
+      m.flipped = [];
+      if (m.matched.length === m.cards.length) m.done = true;
+    } else {
+      m.misses++;
+      m.lock = true;
+      setTimeout(() => {
+        if (V.mg === m) {
+          m.flipped = [];
+          m.lock = false;
+          renderModal();
+        }
+      }, 650);
+    }
   }
   renderModal();
 }
 function mgHtml(ev) {
-  const m = V.mg; const d = m.def;
-  const sk = `<div class="row" style="margin-top:12px"><button class="btn ghost small" data-act="mgskip">${L('Skip (roll the dice)', 'Passer (au hasard)')}</button></div>`;
+  const m = V.mg;
+  const d = m.def;
+  const sk =
+    `<div class="row" style="margin-top:12px">` +
+    `<button class="btn ghost small" data-act="mgskip">${L('Skip (roll the dice)', 'Passer (au hasard)')}` +
+    `</button></div>`;
   const h = head(d.label, `<span class="tag">${L('Mini-game', 'Mini-jeu')}</span>`);
   if (d.type === 'memory') {
-    if (m.done) return h + `<p class="desc">${L('Done', 'Terminé')}: ${m.misses} ${L('misses', 'erreurs')}.</p><div class="row"><button class="btn primary" data-act="mgfinish">${t('Continue')}</button></div>`;
-    return h + `<p class="desc">${L('Find all 4 pairs. Under 5 misses is a clean pass.', 'Retrouve les 4 paires. Moins de 5 erreurs pour réussir à coup sûr.')} <b>${m.misses}</b> ${L('misses', 'erreurs')}</p><div class="ib" style="grid-template-columns:repeat(4,1fr)">${m.cards.map((c, i) => { const up = m.flipped.includes(i) || m.matched.includes(i); return `<button class="btn" style="height:72px;font-size:30px;text-align:center;padding:0" data-act="mgflip" data-v="${i}">${up ? c : '?'}</button>`; }).join('')}</div>` + sk;
+    if (m.done)
+      return (
+        h +
+        (`<p class="desc">${L('Done', 'Terminé')}: ${m.misses} ${L('misses', 'erreurs')}.</p><div class="row">` +
+          `<button class="btn primary" data-act="mgfinish">${t('Continue')}</button></div>`)
+      );
+    return (
+      h +
+      (`<p class="desc">` +
+        L(
+          'Find all 4 pairs. Under 5 misses is a clean pass.',
+          'Retrouve les 4 paires. Moins de 5 erreurs pour réussir à coup sûr.',
+        ) +
+        ` <b>${m.misses}</b> ${L('misses', 'erreurs')}</p>` +
+        `<div class="ib" style="grid-template-columns:repeat(4,1fr)">` +
+        m.cards
+          .map((c, i) => {
+            const up = m.flipped.includes(i) || m.matched.includes(i);
+            return (
+              `<button class="btn" style="height:72px;font-size:30px;text-align:center;padding:0" data-act="mgflip" data-v="${i}">${up ? c : '?'}` +
+              `</button>`
+            );
+          })
+          .join('') +
+        `</div>`) +
+      sk
+    );
   }
-  if (m.done) { const pass = m.ok / d.qs.length >= 0.6; return h + `<p class="desc">${m.ok}/${d.qs.length} — ${pass ? L('Nice work!', 'Bien joué !') : L('Not enough this time.', 'Pas assez cette fois.')}</p><div class="row"><button class="btn primary" data-act="mgfinish">${t('Continue')}</button></div>`; }
+  if (m.done) {
+    const pass = m.ok / d.qs.length >= 0.6;
+    return (
+      h +
+      (`<p class="desc">${m.ok}/${d.qs.length} — ` +
+        (pass ? L('Nice work!', 'Bien joué !') : L('Not enough this time.', 'Pas assez cette fois.')) +
+        `</p><div class="row"><button class="btn primary" data-act="mgfinish">${t('Continue')}</button></div>`)
+    );
+  }
   const q = d.qs[m.i];
-  return h + `<p class="sub">${L('Question', 'Question')} ${m.i + 1}/${d.qs.length}</p><p class="desc" style="font-size:18px">${esc(q.q)}</p><div class="choices">${q.o.map(o => { const gone = m.rem.includes(o); const st = m.ans != null ? (o === q.a ? 'style="border-color:var(--good)"' : o === m.ans ? 'style="border-color:var(--bad)"' : '') : ''; return `<button class="choice ${gone ? 'dis' : ''}" ${st} data-act="${gone ? '' : 'mgans'}" data-v="${ea(o)}"><span class="l">•</span><span>${esc(o)}</span></button>`; }).join('')}</div>
-  <div class="row" style="margin-top:12px">${m.ans != null ? `<button class="btn primary" data-act="mgnext">${t('Continue')}</button>` : (m.hints > 0 ? `<button class="btn small" data-act="mghint">💡 50/50 (${m.hints})</button>` : '')}</div><p class="small muted" style="margin:8px 0 0">${L('Study prep, notebooks and guides give you hints.', 'Les cahiers, guides d\'étude et l\'aide donnent des indices.')}</p>` + sk;
+  return (
+    h +
+    (`<p class="sub">${L('Question', 'Question')} ${m.i + 1}/${d.qs.length}</p>` +
+      `<p class="desc" style="font-size:18px">${esc(q.q)}</p><div class="choices">` +
+      q.o
+        .map(o => {
+          const gone = m.rem.includes(o);
+          const st =
+            m.ans != null
+              ? o === q.a
+                ? 'style="border-color:var(--good)"'
+                : o === m.ans
+                  ? 'style="border-color:var(--bad)"'
+                  : ''
+              : '';
+          return (
+            `<button class="choice ${gone ? 'dis' : ''}" ${st} data-act="${gone ? '' : 'mgans'}" data-v="${ea(o)}">` +
+            `<span class="l">•</span><span>${esc(o)}</span></button>`
+          );
+        })
+        .join('') +
+      `</div>\n  <div class="row" style="margin-top:12px">` +
+      (m.ans != null
+        ? `<button class="btn primary" data-act="mgnext">${t('Continue')}</button>`
+        : m.hints > 0
+          ? `<button class="btn small" data-act="mghint">💡 50/50 (${m.hints})</button>`
+          : '') +
+      `</div><p class="small muted" style="margin:8px 0 0">` +
+      L(
+        'Study prep, notebooks and guides give you hints.',
+        "Les cahiers, guides d'étude et l'aide donnent des indices.",
+      ) +
+      `</p>`) +
+    sk
+  );
 }
 /* ---------- events ---------- */
 function showEvent() {
