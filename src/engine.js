@@ -1790,6 +1790,14 @@ const phoneOf = S => (S.phone = S.phone || { th: {}, un: {}, last: {} });
 const OFF_WHY = ['You left your phone at home today.', 'Your battery died and there is no charger in sight.', 'Your phone is stuck on a software update.'];
 function phoneOff(S) { if (S.di < 2) return null; const h = hash(S.seed + 'phoff' + S.di); return h % 12 === 0 ? OFF_WHY[(h >>> 4) % 3] : null; }
 const CAP_MSG = 'You have texted enough for today. Your battery needs a break.';
+const ASK_WAIT_MSG = 'You asked someone for money recently. Wait a few days.';
+const PHONE_ASK_GAP = 3; // days between two "Ask to borrow money" texts (to anyone)
+const askedMoneyRecently = S => S.di - (S.phoneAsk == null ? -9 : S.phoneAsk) < PHONE_ASK_GAP;
+const THREAD_MAX = 24; // messages kept per conversation
+const threadOf = (P, key) => (P.th[key] = P.th[key] || []);
+function trimThread(th) { while (th.length > THREAD_MAX) th.shift(); }
+// the error to return when the phone is off today, or null
+function phoneOffErr(S) { const off = phoneOff(S); return off ? { err: off } : null; }
 function phoneCan(S, name) { const c = CH[name]; return !!c && c.role !== 'teach' && isMet(S, name); }
 function phoneList(S, name) {
   if (!phoneCan(S, name)) return [];
@@ -1798,26 +1806,26 @@ function phoneList(S, name) {
   S._ph = 1; let il; try { il = interactionList(S, name); } finally { S._ph = 0; }
   return PHONE_ACTS.map(a => { const x = il.find(y => y.id === a[1]); let ok = !!(x && x.ok), why = x ? x.why : 'Not available.';
     if (a[1] === 'lend' && S.money < 5) { ok = false; why = 'You need at least $5.'; }
-    if (ok && a[1] === 'askmoney' && S.di - (S.phoneAsk == null ? -9 : S.phoneAsk) < 3) { ok = false; why = 'You asked someone for money recently. Wait a few days.'; }
-    if (ok && left <= 0) { ok = false; why = 'You have texted enough for today. Your battery needs a break.'; }
+    if (ok && a[1] === 'askmoney' && askedMoneyRecently(S)) { ok = false; why = ASK_WAIT_MSG; }
+    if (ok && left <= 0) { ok = false; why = CAP_MSG; }
     return { id: a[0], n: a[3], ok, why }; });
 }
 function phoneAct(S, name, pid) {
   const a = PHONE_ACTS.find(x => x[0] === pid); if (!a || !phoneCan(S, name)) return { err: 'Not available.' };
   if (S.phase !== 'free') return { err: 'Not now.' };
-  { const off = phoneOff(S); if (off) return { err: off }; }
+  { const offErr = phoneOffErr(S); if (offErr) return offErr; }
   if ((S.today.ph || 0) >= PHONE_CAP) return { err: CAP_MSG };
-  if (a[1] === 'askmoney' && S.di - (S.phoneAsk == null ? -9 : S.phoneAsk) < 3) return { err: 'You asked someone for money recently. Wait a few days.' };
+  if (a[1] === 'askmoney' && askedMoneyRecently(S)) return { err: ASK_WAIT_MSG };
   S._ph = 1; let r; try { r = interact(S, name, a[1], a[2]); } finally { S._ph = 0; }
   if (!r || r.err) return r;
   S.today.ph = (S.today.ph || 0) + 1; S.phoneN = (S.phoneN || 0) + 1; if (a[1] === 'askmoney') S.phoneAsk = S.di;
-  const P = phoneOf(S); const th = (P.th[name] = P.th[name] || []); const T = PH_MC[pid];
+  const P = phoneOf(S); const th = threadOf(P, name); const T = PH_MC[pid];
   th.push({ f: 'me', t: T[hash(name + pid + S.di) % T.length] });
   const rest = []; let rep = null;
   (r.lines || []).forEach((ln, i) => { const m = i === 0 && /^[^:]+?(?: \([^)]*\))?: “([\s\S]*)”$/.exec(ln); if (m) rep = m[1]; else rest.push(ln); });
   if (rep) th.push({ f: 'them', t: rep });
   if (rest.length || (r.chips && r.chips.length)) th.push({ f: 'sys', t: rest.join(' '), c: r.chips || [] });
-  while (th.length > 24) th.shift();
+  trimThread(th);
   P.last[name] = S.di; P.un[name] = 0;
   return r;
 }
@@ -1839,16 +1847,16 @@ function phoneIncoming(S) {
       ['Do you want to hang out this weekend? No big plan.', [['Yes, let us do it', 'r:T+5;f:NPC_INVITED'], ['Maybe another time', 'r:T-1']]]];
     const k = K[(v >= 15 ? h : h % 3) % K.length]; t = k[0]; q = k[1];
   }
-  const P = phoneOf(S); const th = (P.th[who] = P.th[who] || []);
+  const P = phoneOf(S); const th = threadOf(P, who);
   { const lq = th.filter(m => m.q).pop(); if (lq && !lq.done && lq.cold) S.phIgn = (S.phIgn || 0) + 1; }
-  th.push({ f: 'them', t, q, id: S.di, cold: v <= -10 ? 1 : 0 }); while (th.length > 24) th.shift();
+  th.push({ f: 'them', t, q, id: S.di, cold: v <= -10 ? 1 : 0 }); trimThread(th);
   P.un[who] = (P.un[who] || 0) + 1; P.last[who] = S.di; P.ping = who;
   return who;
 }
 function phoneReply(S, name, idx) {
   const th = phoneOf(S).th[name] || []; let m = null; for (let i = th.length - 1; i >= 0; i--) if (th[i].q && !th[i].done) { m = th[i]; break; }
   if (!m || !m.q[idx]) return { err: 'Not available.' };
-  { const off = phoneOff(S); if (off) return { err: off }; }
+  { const offErr = phoneOffErr(S); if (offErr) return offErr; }
   m.done = idx + 1; const ch = [];
   const tg = m.T || name; const ctx = { T: tg, H: tg, C: tg }; applyFx(S, fxs(m.q[idx][1]), ctx, ch);
   { const lb = m.q[idx][0]; if (/^Defend /.test(lb)) S.gcDef = (S.gcDef || 0) + 1; if (lb === 'Laugh along') S.gcLaugh = (S.gcLaugh || 0) + 1; if (lb === 'Leave it on read') S.phIgn = (S.phIgn || 0) + 1; }
@@ -1879,7 +1887,7 @@ function phoneGroupAct(S, key, id) {
   const a = (GC_ACTS[key] || []).find(x => x[0] === id); if (!a) return { err: 'Not available.' };
   if (S.phase !== 'free') return { err: 'Not now.' };
   const l = phoneGroupList(S, key).find(x => x.id === id); if (!l.ok) return { err: l.why };
-  const P = phoneOf(S); const th = (P.th[key] = P.th[key] || []); const ch = []; const h = hash(S.seed + id + S.di);
+  const P = phoneOf(S); const th = threadOf(P, key); const ch = []; const h = hash(S.seed + id + S.di);
   const mem = shuffle(gcMembers(S, key), mul(h)); if (mem.length < 1) return { err: 'Nobody is around.' };
   const say = x => th.push({ f: 'me', t: x }); const them = (n, t) => th.push({ f: 'them', s: n.split(' ')[0], t }); const sys = t => th.push({ f: 'sys', t: t || '', c: ch });
   const T = GC_SAY[id]; say(T[h % T.length]); const nice = GC_NICE[h % GC_NICE.length];
@@ -1898,7 +1906,7 @@ function phoneGroupAct(S, key, id) {
   else if (id === 'f_photo') { them(mem[0], 'Love it!'); addRel(S, mem[0], 2, ch, false, true); sys(); }
   else if (id === 'f_help') { them(mem[0], 'Come find me after dinner. I will help.'); addRel(S, mem[0], 1, ch, false, true); S.prep = Math.min(30, S.prep + 5); sys('Next study check improved.'); }
   S.today.ph = (S.today.ph || 0) + 1; S.phoneN = (S.phoneN || 0) + 1; S.gcN = (S.gcN || 0) + 1; S.today['gc_' + id] = 1; P.last[key] = S.di; P.un[key] = 0;
-  while (th.length > 24) th.shift();
+  trimThread(th);
   logAdd(S, GROUPS[key].n + ' — ' + a[1], ch);
   return { chips: ch };
 }
@@ -1906,7 +1914,7 @@ function phoneGroupIncoming(S) {
   if (rnd(S) > 0.38) return;
   const P = phoneOf(S); const h = hash(S.seed + 'gc' + S.di); const fam = h % 4 === 0; const key = fam ? '#fam' : '#class';
   const mem = shuffle(gcMembers(S, key), mul(h)); if (mem.length < 2) return;
-  const th = (P.th[key] = P.th[key] || []); const a = mem[0], b = mem[1], fa = a.split(' ')[0], fb = b.split(' ')[0];
+  const th = threadOf(P, key); const a = mem[0], b = mem[1], fa = a.split(' ')[0], fb = b.split(' ')[0];
   let m;
   if (fam) {
     const K = [['Dinner is at six. Who is home?', [['I will be there', 'r:T+2'], ['Running late', 'r:T+0'], ['Eat without me', 'r:T-2']]], ['Someone left the lights on again.', [['Sorry, that was me', 'r:T+1'], ['Not me!', 'r:T+0']]], ['Weekend plans? I need to know by tonight.', [['I am free', 'r:T+2'], ['Let me check', 'r:T+0']]]];
@@ -1919,7 +1927,7 @@ function phoneGroupIncoming(S) {
   } else {
     m = { f: 'them', s: fa, t: 'Anyone coming to the library after school?', q: [['I am in', 'r:T+3'], ['Not today, sorry', 'r:T+0']], T: a, id: S.di };
   }
-  th.push(m); while (th.length > 24) th.shift();
+  th.push(m); trimThread(th);
   P.un[key] = (P.un[key] || 0) + 1; P.last[key] = S.di; P.ping = P.ping || key;
 }
 
@@ -1927,7 +1935,7 @@ function phoneGroupIncoming(S) {
 const PG_GAP = { reply: 1, who: 4, emoji: 6, tap: 6 };
 function phoneGame(S, id, score, max) {
   if (!PG_GAP[id]) return { err: 'Not available.' };
-  const off = phoneOff(S); if (off) return { err: off };
+  const offErr = phoneOffErr(S); if (offErr) return offErr;
   if (S.phase !== 'free') return { err: 'Not now.' };
   if (S.today['pg_' + id]) return { err: 'You already played that today.' };
   S.today['pg_' + id] = 1; S.pgLast = S.pgLast || {}; S.pgN = (S.pgN || 0) + 1; if (id === 'tap' ? score >= 18 : score >= max) S.pgPerf = (S.pgPerf || 0) + 1;
