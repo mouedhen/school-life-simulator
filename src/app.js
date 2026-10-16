@@ -2286,34 +2286,88 @@ function relBar(v) {
 
 /* ---------- avatars ---------- */
 /* simple drawn avatars (procedural SVG, deterministic per name) */
-const AVC = { skin: ['#f6d9c0', '#eec39f', '#d9a577', '#b57f55', '#8a5a3b', '#5f3d28'], hair: ['#2b1d17', '#4a2f20', '#7a4a2a', '#b07a3c', '#d9b05a', '#a8412a', '#3b3b44', '#c9c9d0'], bg: ['#cfe3f5', '#f5d6df', '#d9ecd1', '#f3e6bf', '#e0d6f2', '#d1ece8', '#f6dcc8'] };
+const AVC = {
+  skin: ['#f6d9c0', '#eec39f', '#d9a577', '#b57f55', '#8a5a3b', '#5f3d28'],
+  hair: ['#2b1d17', '#4a2f20', '#7a4a2a', '#b07a3c', '#d9b05a', '#a8412a', '#3b3b44', '#c9c9d0'],
+  bg: ['#cfe3f5', '#f5d6df', '#d9ecd1', '#f3e6bf', '#e0d6f2', '#d1ece8', '#f6dcc8'],
+};
 function avatar(name, size) {
-  const c = CH[name] || {}; const h = hsh(name); const pick = (arr, sh) => arr[(h >>> sh) % arr.length];
-  const skin = pick(AVC.skin, 0), bg = pick(AVC.bg, 5), girl = c.g === 'F', adult = c.role === 'teach' || name === 'Mom' || name === 'Dad';
-  let hair = pick(AVC.hair, 9); if (c.role === 'teach' && ((h >>> 3) % 3 === 0)) hair = '#a9a9b2';
-  const style = (h >>> 12) % 4, eyeSt = (h >>> 15) % 3, acc = (h >>> 18) % 5;
+  const c = CH[name] || {};
+  const h = hsh(name);
+  const pick = (arr, sh) => arr[(h >>> sh) % arr.length];
+  const skin = pick(AVC.skin, 0),
+    bg = pick(AVC.bg, 5),
+    girl = c.g === 'F',
+    adult = c.role === 'teach' || name === 'Mom' || name === 'Dad';
+  let hair = pick(AVC.hair, 9);
+  if (c.role === 'teach' && (h >>> 3) % 3 === 0) hair = '#a9a9b2';
+  const style = (h >>> 12) % 4,
+    eyeSt = (h >>> 15) % 3,
+    acc = (h >>> 18) % 5;
   const fy = adult ? 0 : 1; // faces slightly rounder for kids
-  let back = '', front = '';
+  let back = '',
+    front = '';
   if (girl) {
-    back = [`<path d="M14 40c0-18 8-26 18-26s18 8 18 26v14H14z" fill="${hair}"/>`, `<path d="M15 38c0-17 8-24 17-24s17 7 17 24c0 6 3 14 3 20H12c0-6 3-14 3-20z" fill="${hair}"/>`, `<path d="M14 40c0-18 8-26 18-26s18 8 18 26v8H14z" fill="${hair}"/><circle cx="14" cy="22" r="5" fill="${hair}"/><circle cx="50" cy="22" r="5" fill="${hair}"/>`, `<path d="M14 40c0-18 8-26 18-26s18 8 18 26v6H14z" fill="${hair}"/><circle cx="32" cy="12" r="6" fill="${hair}"/>`][style];
+    back = [
+      `<path d="M14 40c0-18 8-26 18-26s18 8 18 26v14H14z" fill="${hair}"/>`,
+      `<path d="M15 38c0-17 8-24 17-24s17 7 17 24c0 6 3 14 3 20H12c0-6 3-14 3-20z" fill="${hair}"/>`,
+      `<path d="M14 40c0-18 8-26 18-26s18 8 18 26v8H14z" fill="${hair}"/>` +
+        `<circle cx="14" cy="22" r="5" fill="${hair}"/><circle cx="50" cy="22" r="5" fill="${hair}"/>`,
+      `<path d="M14 40c0-18 8-26 18-26s18 8 18 26v6H14z" fill="${hair}"/>` +
+        `<circle cx="32" cy="12" r="6" fill="${hair}"/>`,
+    ][style];
     front = `<path d="M18 31c4-9 10-12 14-12s10 3 14 12c-5-4-10-6-14-6s-9 2-14 6z" fill="${hair}"/>`;
   } else {
     back = '';
-    front = [`<path d="M17 32c0-12 6-18 15-18s15 6 15 18c-4-5-9-8-15-8s-11 3-15 8z" fill="${hair}"/>`, `<path d="M16 33c-1-13 6-20 16-20s17 7 16 20c-2-6-4-9-8-10-4 2-14 2-18-1-3 2-5 5-6 11z" fill="${hair}"/>`, `<path d="M17 31c0-11 6-17 15-17s15 6 15 17l-3-4c-4-3-8-4-12-4s-9 1-12 4z" fill="${hair}"/><path d="M20 20c3-5 8-8 14-6l-4 5z" fill="${hair}"/>`, `<path d="M16 34c-2-14 5-21 16-21s18 7 16 21c-1-7-4-10-7-12-3 1-6 1-9 0-5 1-12 3-16 12z" fill="${hair}"/>`][style];
+    front = [
+      `<path d="M17 32c0-12 6-18 15-18s15 6 15 18c-4-5-9-8-15-8s-11 3-15 8z" fill="${hair}"/>`,
+      `<path d="M16 33c-1-13 6-20 16-20s17 7 16 20c-2-6-4-9-8-10-4 2-14 2-18-1-3 2-5 5-6 11z" fill="${hair}"/>`,
+      `<path d="M17 31c0-11 6-17 15-17s15 6 15 17l-3-4c-4-3-8-4-12-4s-9 1-12 4z" fill="${hair}"/>` +
+        `<path d="M20 20c3-5 8-8 14-6l-4 5z" fill="${hair}"/>`,
+      `<path d="M16 34c-2-14 5-21 16-21s18 7 16 21c-1-7-4-10-7-12-3 1-6 1-9 0-5 1-12 3-16 12z" fill="${hair}"/>`,
+    ][style];
   }
-  const ey = eyeSt === 0 ? `<circle cx="26" cy="36" r="2.1" fill="#2a2323"/><circle cx="38" cy="36" r="2.1" fill="#2a2323"/>` : eyeSt === 1 ? `<ellipse cx="26" cy="36" rx="2" ry="2.8" fill="#2a2323"/><ellipse cx="38" cy="36" rx="2" ry="2.8" fill="#2a2323"/><circle cx="26.7" cy="35" r=".7" fill="#fff"/><circle cx="38.7" cy="35" r=".7" fill="#fff"/>` : `<path d="M23.5 36.5q2.5-3 5 0M35.5 36.5q2.5-3 5 0" stroke="#2a2323" stroke-width="1.8" fill="none" stroke-linecap="round"/>`;
-  const mouth = ((h >>> 21) % 3) === 0 ? `<path d="M28 45q4 3 8 0" stroke="#7a3b3b" stroke-width="1.6" fill="none" stroke-linecap="round"/>` : ((h >>> 21) % 3) === 1 ? `<path d="M29 45.5q3 2 6 0" stroke="#7a3b3b" stroke-width="1.6" fill="none" stroke-linecap="round"/>` : `<path d="M28.5 45q3.5 4 7 0z" fill="#9a4a4a"/>`;
-  const cheek = `<circle cx="22" cy="42" r="2.6" fill="#e8847a" opacity=".28"/><circle cx="42" cy="42" r="2.6" fill="#e8847a" opacity=".28"/>`;
+  const ey =
+    eyeSt === 0
+      ? `<circle cx="26" cy="36" r="2.1" fill="#2a2323"/><circle cx="38" cy="36" r="2.1" fill="#2a2323"/>`
+      : eyeSt === 1
+        ? `<ellipse cx="26" cy="36" rx="2" ry="2.8" fill="#2a2323"/>` +
+          `<ellipse cx="38" cy="36" rx="2" ry="2.8" fill="#2a2323"/>` +
+          `<circle cx="26.7" cy="35" r=".7" fill="#fff"/><circle cx="38.7" cy="35" r=".7" fill="#fff"/>`
+        : `<path d="M23.5 36.5q2.5-3 5 0M35.5 36.5q2.5-3 5 0" stroke="#2a2323" stroke-width="1.8" fill="none" stroke-linecap="round"/>`;
+  const mouth =
+    (h >>> 21) % 3 === 0
+      ? `<path d="M28 45q4 3 8 0" stroke="#7a3b3b" stroke-width="1.6" fill="none" stroke-linecap="round"/>`
+      : (h >>> 21) % 3 === 1
+        ? `<path d="M29 45.5q3 2 6 0" stroke="#7a3b3b" stroke-width="1.6" fill="none" stroke-linecap="round"/>`
+        : `<path d="M28.5 45q3.5 4 7 0z" fill="#9a4a4a"/>`;
+  const cheek =
+    `<circle cx="22" cy="42" r="2.6" fill="#e8847a" opacity=".28"/>` +
+    `<circle cx="42" cy="42" r="2.6" fill="#e8847a" opacity=".28"/>`;
   let ac = '';
-  if (acc === 0) ac = `<g fill="none" stroke="#3a3a44" stroke-width="1.5"><circle cx="26" cy="36" r="5"/><circle cx="38" cy="36" r="5"/><path d="M31 36h2"/></g>`;
-  else if (acc === 1 && !girl && adult) ac = `<path d="M24 46q8 8 16 0q-2 7-8 8q-6-1-8-8z" fill="${hair}" opacity=".9"/>`;
-  else if (acc === 2 && girl) ac = `<path d="M40 17l5-3v8z M40 17l-5-3v8z" fill="#e45c7a"/><circle cx="40" cy="17" r="1.6" fill="#c23a5c"/>`;
+  if (acc === 0)
+    ac =
+      `<g fill="none" stroke="#3a3a44" stroke-width="1.5"><circle cx="26" cy="36" r="5"/>` +
+      `<circle cx="38" cy="36" r="5"/><path d="M31 36h2"/></g>`;
+  else if (acc === 1 && !girl && adult)
+    ac = `<path d="M24 46q8 8 16 0q-2 7-8 8q-6-1-8-8z" fill="${hair}" opacity=".9"/>`;
+  else if (acc === 2 && girl)
+    ac = `<path d="M40 17l5-3v8z M40 17l-5-3v8z" fill="#e45c7a"/>` + `<circle cx="40" cy="17" r="1.6" fill="#c23a5c"/>`;
   const neck = `<rect x="28" y="50" width="8" height="8" fill="${skin}"/>`;
-  const shirt = `<path d="M8 66c0-10 9-14 24-14s24 4 24 14z" fill="${adult ? '#5b6b8c' : pick(['#e07a5f', '#81b29a', '#f2cc8f', '#6d8cc7', '#b185c9', '#e0a050'], 2)}"/>`;
+  const shirt =
+    `<path d="M8 66c0-10 9-14 24-14s24 4 24 14z"` +
+    (` fill="` +
+      (adult ? '#5b6b8c' : pick(['#e07a5f', '#81b29a', '#f2cc8f', '#6d8cc7', '#b185c9', '#e0a050'], 2)) +
+      `"/>`);
   const ear = `<circle cx="17" cy="38" r="3" fill="${skin}"/><circle cx="47" cy="38" r="3" fill="${skin}"/>`;
   const face = `<ellipse cx="32" cy="${35 + fy}" rx="15" ry="${adult ? 17 : 16}" fill="${skin}"/>`;
   const sz = size || 44;
-  return `<svg class="av" role="img" aria-label="${ea(name)}" style="width:${sz}px;height:${sz}px" viewBox="0 0 64 64"><clipPath id="avc${h}"><circle cx="32" cy="32" r="32"/></clipPath><g clip-path="url(#avc${h})"><rect width="64" height="64" fill="${bg}"/>${back}${neck}${shirt}${ear}${face}${cheek}${ey}${mouth}${front}${ac}</g></svg>`;
+  return (
+    `<svg class="av" role="img" aria-label="${ea(name)}" style="width:${sz}px;height:${sz}px" viewBox="0 0 64 64">` +
+    `<clipPath id="avc${h}"><circle cx="32" cy="32" r="32"/></clipPath><g clip-path="url(#avc${h})">` +
+    `<rect width="64" height="64" fill="${bg}"/>${back}${neck}${shirt}${ear}${face}${cheek}${ey}${mouth}${front}${ac}` +
+    `</g></svg>`
+  );
 }
 
 /* ---------- People tab ---------- */
