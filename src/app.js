@@ -2569,41 +2569,138 @@ function viewShop() {
 
 /* ---------- Work tab: kitchen, family time, jobs ---------- */
 function kitchenHtml() {
-  const lvl = E.cookLevel(S), knife = !!S.perm['Cooking knife'];
+  const lvl = E.cookLevel(S),
+    knife = !!S.perm['Cooking knife'];
   const rows = E.RECIPES.map(r => {
-    const ok = E.recipeOk(S, r), price = E.cookPrice(S, r), can = ok && S.phase === 'free' && S.blocks >= 1 && S.money >= price;
-    const hint = ok ? L('1 block · tastes ', '1 bloc · goût ') + '★'.repeat(r.q) + '☆'.repeat(5 - r.q) : L('Mom teaches this when your relationship with her reaches ' + r.mom + (r.knife ? ', and you have her knife.' : '.'), 'Maman te l\'apprend quand ta relation avec elle atteint ' + r.mom + (r.knife ? ', et que tu as son couteau.' : '.'));
-    return `<div class="card item" style="margin:0"><div class="top"><span>${ok ? esc(tr(r.n)) : '🔒 ???'}</span><span class="price">$${price}</span></div><div class="muted small">${hint}</div><div class="row"><button class="btn small" data-act="cook" data-v="${r.id}" ${can ? '' : 'disabled'}>${L('Cook', 'Cuisiner')}</button></div></div>`;
+    const ok = E.recipeOk(S, r),
+      price = E.cookPrice(S, r),
+      can = ok && S.phase === 'free' && S.blocks >= 1 && S.money >= price;
+    const hint = ok
+      ? L('1 block · tastes ', '1 bloc · goût ') + '★'.repeat(r.q) + '☆'.repeat(5 - r.q)
+      : L(
+          'Mom teaches this when your relationship with her reaches ' +
+            r.mom +
+            (r.knife ? ', and you have her knife.' : '.'),
+          "Maman te l'apprend quand ta relation avec elle atteint " +
+            r.mom +
+            (r.knife ? ', et que tu as son couteau.' : '.'),
+        );
+    return (
+      `<div class="card item" style="margin:0"><div class="top"><span>${ok ? esc(tr(r.n)) : '🔒 ???'}` +
+      `</span><span class="price">$${price}</span></div><div class="muted small">${hint}</div>` +
+      `<div class="row">` +
+      `<button class="btn small" data-act="cook" data-v="${r.id}" ${can ? '' : 'disabled'}>${L('Cook', 'Cuisiner')}` +
+      `</button></div></div>`
+    );
   }).join('');
-  return `<div class="card"><h3>${L('Kitchen', 'Cuisine')}</h3><p class="muted small">${L('Cook for yourself, your family or a friend. A good meal warms people up. Mom teaches you new recipes as your bond with her grows.', 'Cuisine pour toi, ta famille ou un ami. Un bon repas rapproche les gens. Maman t\'apprend de nouvelles recettes à mesure que votre lien grandit.')}</p><p class="small" style="margin:0">${L('Cooking level', 'Niveau de cuisine')}: <b>${lvl}/5</b>${knife ? ' · 🔪 ' + L('Mom\'s cooking knife', 'Le couteau de cuisine de Maman') : ''}</p></div><div class="grid2" style="grid-template-columns:1fr;margin-bottom:14px">${rows}</div>`;
+  return (
+    `<div class="card"><h3>${L('Kitchen', 'Cuisine')}</h3><p class="muted small">` +
+    L(
+      'Cook for yourself, your family or a friend. A good meal warms people up. Mom teaches you new recipes as your bond with her grows.',
+      "Cuisine pour toi, ta famille ou un ami. Un bon repas rapproche les gens. Maman t'apprend de nouvelles recettes à mesure que votre lien grandit.",
+    ) +
+    `</p><p class="small" style="margin:0">${L('Cooking level', 'Niveau de cuisine')}: <b>${lvl}/5</b>` +
+    (knife ? ' · 🔪 ' + L("Mom's cooking knife", 'Le couteau de cuisine de Maman') : '') +
+    `</p></div><div class="grid2" style="grid-template-columns:1fr;margin-bottom:14px">${rows}</div>`
+  );
 }
 function familyHtml() {
-  const rows = ['Dad', 'Riley', 'Max', 'Oliver', 'Sophie'].map(n => {
-    const B = E.BONDS[n], has = !!S.perm[B.item], n1 = B.acts.filter(a => E.bondOk(S, n, a)).length;
-    return `<div class="card item" style="margin:0"><div class="top"><span>${esc(n)}${has ? ' 🎁' : ''}</span><span class="price">${S.rel[n]}</span></div><div class="muted small">${relT(E.relLabel(S.rel[n]))} · ${n1}/5 ${L('activities', 'activités')}${has ? ' · ' + esc(tr(B.item)) : ''}</div><div class="row"><button class="btn small" data-act="bond" data-v="${ea(n)}" ${S.phase === 'free' ? '' : 'disabled'}>${L('Spend time', 'Passer du temps')}</button></div></div>`;
-  }).join('');
-  return `<div class="card"><h3>${L('Family time', 'En famille')}</h3><p class="muted small" style="margin:0">${L('Each family member has activities that open up as you grow closer. Reach 100 with someone and they may give you something special.', 'Chaque membre de la famille a des activités qui s\'ouvrent à mesure que vous vous rapprochez. À 100 avec quelqu\'un, il pourrait te donner un objet spécial.')}</p><p class="small" style="margin:6px 0 0">${inkHtml('k6', CLUES().k6)}</p></div><div class="grid2" style="grid-template-columns:1fr;margin-bottom:14px">${rows}</div>`;
+  const rows = ['Dad', 'Riley', 'Max', 'Oliver', 'Sophie']
+    .map(n => {
+      const B = E.BONDS[n],
+        has = !!S.perm[B.item],
+        n1 = B.acts.filter(a => E.bondOk(S, n, a)).length;
+      return (
+        `<div class="card item" style="margin:0"><div class="top"><span>${esc(n)}${has ? ' 🎁' : ''}</span>` +
+        `<span class="price">${S.rel[n]}</span></div>` +
+        `<div` +
+        ` class="muted small">${relT(E.relLabel(S.rel[n]))} · ${n1}/5 ${L('activities', 'activités')}${has ? ' · ' + esc(tr(B.item)) : ''}` +
+        `</div><div class="row">` +
+        `<button class="btn small" data-act="bond"` +
+        ` data-v="${ea(n)}" ${S.phase === 'free' ? '' : 'disabled'}>${L('Spend time', 'Passer du temps')}` +
+        `</button></div></div>`
+      );
+    })
+    .join('');
+  return (
+    `<div class="card"><h3>${L('Family time', 'En famille')}</h3><p class="muted small" style="margin:0">` +
+    L(
+      'Each family member has activities that open up as you grow closer. Reach 100 with someone and they may give you something special.',
+      "Chaque membre de la famille a des activités qui s'ouvrent à mesure que vous vous rapprochez. À 100 avec quelqu'un, il pourrait te donner un objet spécial.",
+    ) +
+    `</p><p class="small" style="margin:6px 0 0">${inkHtml('k6', CLUES().k6)}</p></div>` +
+    `<div class="grid2" style="grid-template-columns:1fr;margin-bottom:14px">${rows}</div>`
+  );
 }
 function showBond(who) {
-  const B = E.BONDS[who]; if (!B) return;
-  const rows = B.acts.map(a => {
-    const ok = E.bondOk(S, who, a), can = ok && S.blocks >= 1 && S.money >= a.cost;
-    const sub = ok ? `${a.cost ? '$' + a.cost + ' · ' : ''}${'★'.repeat(a.q)}${'☆'.repeat(5 - a.q)}` : (a.item && S.rel[who] >= a.need ? L('Unlocks with their special gift.', 'Se débloque avec leur cadeau spécial.') : L('Unlocks at relationship ', 'Se débloque à la relation ') + a.need);
-    return `<button class="choice ${can ? '' : 'dis'}" data-act="bondfor" data-v="${ea(who + '|' + a.id)}" ${can ? '' : 'aria-disabled="true"'}><span class="lt">·</span><span>${ok ? esc(tr(a.n)) : '🔒 ???'} <span class="muted small">${sub}</span></span></button>`;
-  }).join('');
-  openModal(head(who, '') + `<p class="desc">${L('Relationship', 'Relation')}: ${S.rel[who]} · ${relT(E.relLabel(S.rel[who]))}</p><div class="choices">${rows}</div>` + closeRow());
+  const B = E.BONDS[who];
+  if (!B) return;
+  const rows = B.acts
+    .map(a => {
+      const ok = E.bondOk(S, who, a),
+        can = ok && S.blocks >= 1 && S.money >= a.cost;
+      const sub = ok
+        ? `${a.cost ? '$' + a.cost + ' · ' : ''}${'★'.repeat(a.q)}${'☆'.repeat(5 - a.q)}`
+        : a.item && S.rel[who] >= a.need
+          ? L('Unlocks with their special gift.', 'Se débloque avec leur cadeau spécial.')
+          : L('Unlocks at relationship ', 'Se débloque à la relation ') + a.need;
+      return (
+        `<button class="choice ${can ? '' : 'dis'}" data-act="bondfor"` +
+        ` data-v="${ea(who + '|' + a.id)}" ${can ? '' : 'aria-disabled="true"'}><span class="lt">·</span>` +
+        `<span>${ok ? esc(tr(a.n)) : '🔒 ???'} <span class="muted small">${sub}</span></span></button>`
+      );
+    })
+    .join('');
+  openModal(
+    head(who, '') +
+      (`<p class="desc">${L('Relationship', 'Relation')}: ${S.rel[who]} · ${relT(E.relLabel(S.rel[who]))}` +
+        `</p><div class="choices">${rows}</div>`) +
+      closeRow(),
+  );
 }
 function showCook(rid) {
-  const r = E.RECIPES.find(x => x.id === rid); if (!r) return;
-  const friends = E.metKids(S).slice().filter(n => S.rel[n] >= 0).sort((a, b) => S.rel[b] - S.rel[a]).slice(0, 8);
-  const btn = (who, label, sub) => `<button class="choice" data-act="cookfor" data-v="${ea(rid + '|' + who)}"><span class="lt">·</span><span>${label}${sub ? ` <span class="muted small">${sub}</span>` : ''}</span></button>`;
-  openModal(head(L('Cook ', 'Cuisiner ') + tr(r.n), '') + `<p class="desc">${L('Who is it for?', 'Pour qui ?')}</p><div class="choices">${btn('self', L('Myself', 'Moi-même'), '')}${btn('family', L('The family', 'La famille'), '')}${friends.map(n => btn(n, esc(n), relT(E.relLabel(S.rel[n])))).join('')}</div>` + closeRow());
+  const r = E.RECIPES.find(x => x.id === rid);
+  if (!r) return;
+  const friends = E.metKids(S)
+    .slice()
+    .filter(n => S.rel[n] >= 0)
+    .sort((a, b) => S.rel[b] - S.rel[a])
+    .slice(0, 8);
+  const btn = (who, label, sub) =>
+    `<button class="choice" data-act="cookfor" data-v="${ea(rid + '|' + who)}"><span class="lt">·</span>` +
+    `<span>${label}` +
+    (sub ? ` <span class="muted small">${sub}</span>` : '') +
+    `</span></button>`;
+  openModal(
+    head(L('Cook ', 'Cuisiner ') + tr(r.n), '') +
+      (`<p class="desc">${L('Who is it for?', 'Pour qui ?')}</p>` +
+        `<div class="choices">${btn('self', L('Myself', 'Moi-même'), '')}${btn('family', L('The family', 'La famille'), '')}` +
+        friends.map(n => btn(n, esc(n), relT(E.relLabel(S.rel[n])))).join('') +
+        `</div>`) +
+      closeRow(),
+  );
 }
 function viewWork() {
-  return kitchenHtml() + familyHtml() + `<div class="card"><h3>${t('Work')}</h3><p class="muted small">${L('Earn money by spending after-school time blocks.', 'Gagne de l\'argent en échange de blocs de temps.')}</p></div><div class="grid2" style="grid-template-columns:1fr">${E.JOBS.map(j => {
-    const can = S.phase === 'free' && S.blocks >= j.blocks && !(j.need && !(S.inv[j.need] > 0));
-    return `<div class="card item" style="margin:0"><div class="top"><span>${esc(j.n)}</span><span class="price">$${j.pay}</span></div><div class="muted small">${j.blocks} ${j.blocks > 1 ? t('blocks') : t('block')} · ${esc(j.note || '')}${j.need ? ' · ' + t('Needs') + ' ' + esc(j.need) : ''}</div><div class="row"><button class="btn small" data-act="work" data-v="${j.id}" ${can ? '' : 'disabled'}>${t('Do it')}</button></div></div>`;
-  }).join('')}</div>`;
+  return (
+    kitchenHtml() +
+    familyHtml() +
+    (`<div class="card"><h3>${t('Work')}</h3><p class="muted small">` +
+      L('Earn money by spending after-school time blocks.', "Gagne de l'argent en échange de blocs de temps.") +
+      `</p></div><div class="grid2" style="grid-template-columns:1fr">` +
+      E.JOBS.map(j => {
+        const can = S.phase === 'free' && S.blocks >= j.blocks && !(j.need && !(S.inv[j.need] > 0));
+        return (
+          `<div class="card item" style="margin:0"><div class="top"><span>${esc(j.n)}</span>` +
+          `<span class="price">$${j.pay}</span></div>` +
+          `<div` +
+          ` class="muted small">${j.blocks} ${j.blocks > 1 ? t('blocks') : t('block')} · ${esc(j.note || '')}${j.need ? ' · ' + t('Needs') + ' ' + esc(j.need) : ''}` +
+          `</div><div class="row">` +
+          `<button class="btn small" data-act="work" data-v="${j.id}" ${can ? '' : 'disabled'}>${t('Do it')}` +
+          `</button></div></div>`
+        );
+      }).join('') +
+      `</div>`)
+  );
 }
 
 /* ---------- Calendar tab ---------- */
