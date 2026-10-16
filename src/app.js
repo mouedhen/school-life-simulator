@@ -3031,29 +3031,109 @@ function mgHtml(ev) {
 }
 /* ---------- events ---------- */
 function showEvent() {
-  const ev = E.buildEvent(S); if (!ev) { render(); return; }
+  const ev = E.buildEvent(S);
+  if (!ev) {
+    render();
+    return;
+  }
   V.res = null;
-  const tag = ev.pedago ? `<span class="tag">Pédago</span>` : ev.rand ? `<span class="tag alt">${L('Random event', 'Imprévu')}</span>` : ev.kind === 'personal' ? `<span class="tag alt">${L('Personal', 'Personnel')}</span>` : (ev.kind === 'ballinvite' || ev.kind === 'ball') ? `<span class="tag">${t('The Ball')}</span>` : ev.kind === 'holiday' ? `<span class="tag alt">${/^(knife|gift_)/.test(ev.id || '') ? L('Family', 'Famille') : L('Holiday', 'Congé')}</span>` : ev.kind === 'npc' ? `<span class="tag alt">${L('Encounter', 'Rencontre')}</span>` : ev.kind === 'notice' ? `<span class="tag alt">${L('Family', 'Famille')}</span>` : ev.kind === 'birthday' ? `<span class="tag alt">${t('Birthday')}</span>` : `<span class="tag">${fmtDate(E.dayOf(S).d)}</span>`;
+  const tag = ev.pedago
+    ? `<span class="tag">Pédago</span>`
+    : ev.rand
+      ? `<span class="tag alt">${L('Random event', 'Imprévu')}</span>`
+      : ev.kind === 'personal'
+        ? `<span class="tag alt">${L('Personal', 'Personnel')}</span>`
+        : ev.kind === 'ballinvite' || ev.kind === 'ball'
+          ? `<span class="tag">${t('The Ball')}</span>`
+          : ev.kind === 'holiday'
+            ? `<span class="tag alt">` +
+              (/^(knife|gift_)/.test(ev.id || '') ? L('Family', 'Famille') : L('Holiday', 'Congé')) +
+              `</span>`
+            : ev.kind === 'npc'
+              ? `<span class="tag alt">${L('Encounter', 'Rencontre')}</span>`
+              : ev.kind === 'notice'
+                ? `<span class="tag alt">${L('Family', 'Famille')}</span>`
+                : ev.kind === 'birthday'
+                  ? `<span class="tag alt">${t('Birthday')}</span>`
+                  : `<span class="tag">${fmtDate(E.dayOf(S).d)}</span>`;
   V.modal = () => {
     if (V.mg) return mgHtml(ev);
     if (V.res) return resultHtml(ev);
-    if (V.sub && V.sub.type === 'gift') return head(ev.title, tag) + `<p class="desc">${L('Pick an item.', 'Choisis un objet.')}</p><div class="ib">${E.giftItems(S).map(it => `<button class="btn" data-act="evgift" data-v="${ea(it.n)}">${itemIcon(it.n, it.kind)} ${esc(it.n)}<small>×${S.inv[it.n]}</small></button>`).join('')}</div><div class="row" style="margin-top:12px"><button class="btn ghost" data-act="evback">${t('Back')}</button></div>`;
-    const newf = ev.met && ev.met.length ? `<div class="newface">👋 ${L('New contact', 'Nouveau contact')}: <b>${ev.met.map(esc).join(', ')}</b></div>` : '';
-    const who = newf + (ev.who && ev.who.length ? `<div class="who">${ev.who.map(w => `<span><b>${esc(w.role)}</b>${esc(w.names.join(', '))}</span>`).join('')}</div>` : '');
-    return head(ev.title, tag) + `<p class="desc">${esc(ev.desc)}</p>${isVoiced(ev) ? `<div class="row" style="margin-bottom:8px">${listenBtn()}</div>` : ''}${who}<div class="choices">${ev.choices.map((c, i) => `<button class="choice ${c.disabled ? 'dis' : ''}" data-act="pick" data-v="${i}" ${c.disabled ? 'aria-disabled="true"' : ''}><span class="l">${c.l}</span><span>${esc(c.x)}${c.chance != null ? `<small>~${c.chance}% ${L('chance to accept', 'de chances qu\'il/elle accepte')}</small>` : ''}${c.hint ? `<span class="hint">${esc(c.hint)}</span>` : ''}${c.disabled ? `<small>${esc(c.why || '')}</small>` : ''}</span></button>`).join('')}</div>`;
+    if (V.sub && V.sub.type === 'gift')
+      return (
+        head(ev.title, tag) +
+        (`<p class="desc">${L('Pick an item.', 'Choisis un objet.')}</p><div class="ib">` +
+          E.giftItems(S)
+            .map(
+              it =>
+                `<button class="btn" data-act="evgift" data-v="${ea(it.n)}">${itemIcon(it.n, it.kind)} ${esc(it.n)}` +
+                `<small>×${S.inv[it.n]}</small></button>`,
+            )
+            .join('') +
+          `</div><div class="row" style="margin-top:12px">` +
+          `<button class="btn ghost" data-act="evback">${t('Back')}</button></div>`)
+      );
+    const newf =
+      ev.met && ev.met.length
+        ? `<div class="newface">👋 ${L('New contact', 'Nouveau contact')}: <b>${ev.met.map(esc).join(', ')}</b>` +
+          `</div>`
+        : '';
+    const who =
+      newf +
+      (ev.who && ev.who.length
+        ? `<div class="who">` +
+          ev.who.map(w => `<span><b>${esc(w.role)}</b>${esc(w.names.join(', '))}</span>`).join('') +
+          `</div>`
+        : '');
+    return (
+      head(ev.title, tag) +
+      (`<p class="desc">${esc(ev.desc)}</p>` +
+        (isVoiced(ev) ? `<div class="row" style="margin-bottom:8px">${listenBtn()}</div>` : '') +
+        `${who}<div class="choices">` +
+        ev.choices
+          .map(
+            (c, i) =>
+              `<button class="choice ${c.disabled ? 'dis' : ''}" data-act="pick" data-v="${i}" ${c.disabled ? 'aria-disabled="true"' : ''}>` +
+              `<span class="l">${c.l}</span><span>${esc(c.x)}` +
+              (c.chance != null
+                ? `<small>~${c.chance}% ${L('chance to accept', "de chances qu'il/elle accepte")}</small>`
+                : '') +
+              (c.hint ? `<span class="hint">${esc(c.hint)}</span>` : '') +
+              (c.disabled ? `<small>${esc(c.why || '')}</small>` : '') +
+              `</span></button>`,
+          )
+          .join('') +
+        `</div>`)
+    );
   };
   V.evCur = ev;
   renderModal();
 }
 function resultHtml(ev) {
   const r = V.res;
-  return head(ev.title, `<span class="tag alt">${L('What happened', 'Résultat')}</span>`) + `<div class="lines">${(r.lines || []).map(lineHtml).join('')}</div>${r.thought ? `<p class="thought">${esc(r.thought)}</p>` : ''}${chips(r.chips)}<div class="row" style="margin-top:16px"><button class="btn primary" data-act="evnext">${t('Continue')}</button>${isVoiced(ev) ? listenBtn() : ''}</div>`;
+  return (
+    head(ev.title, `<span class="tag alt">${L('What happened', 'Résultat')}</span>`) +
+    (`<div class="lines">${(r.lines || []).map(lineHtml).join('')}</div>` +
+      (r.thought ? `<p class="thought">${esc(r.thought)}</p>` : '') +
+      `${chips(r.chips)}<div class="row" style="margin-top:16px">` +
+      `<button class="btn primary" data-act="evnext">${t('Continue')}` +
+      `</button>${isVoiced(ev) ? listenBtn() : ''}</div>`)
+  );
 }
 function afterEvent() {
   closeModal();
-  if (S && S.flags && S.flags.REVEAL_DONE && !V.revealed) { V.revealed = 1; applyA11y(); try { Store.prefs().then(p => Store.prefs(Object.assign({}, p, { revealed: 1 }))); } catch (e) {} setTimeout(() => toast(L('The faint ink stays visible now.', 'L\'encre pâle reste visible, désormais.')), 600); }
+  if (S && S.flags && S.flags.REVEAL_DONE && !V.revealed) {
+    V.revealed = 1;
+    applyA11y();
+    try {
+      Store.prefs().then(p => Store.prefs(Object.assign({}, p, { revealed: 1 })));
+    } catch (e) {}
+    setTimeout(() => toast(L('The faint ink stays visible now.', "L'encre pâle reste visible, désormais.")), 600);
+  }
   Store.autosave(S);
-  if (S.phase === 'ending') { markEnding(); }
+  if (S.phase === 'ending') {
+    markEnding();
+  }
   render();
   if (!S.over && S.phase === 'event') showEvent();
 }
