@@ -790,7 +790,8 @@ const listenBtn = () =>
 /* ---------- icons ---------- */
 const IC = {
   today: '<path d="M4 5h16v14H4z"/><path d="M8 3v4M16 3v4M4 10h16"/>',
-  people: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.3"/><path d="M16 14.2c2.8.2 5 2.4 5 5.8"/>',
+  people:
+    '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.3"/><path d="M16 14.2c2.8.2 5 2.4 5 5.8"/>',
   shop: '<path d="M4 8h16l-1.2 11H5.2z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
   work: '<rect x="3" y="7" width="18" height="12" rx="2"/><path d="M9 7V5h6v2M3 12h18"/>',
   cal: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M8 3v4M16 3v4M3.5 10h17M8 14l2 2 3-3"/>',
