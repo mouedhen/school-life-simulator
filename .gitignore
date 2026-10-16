@@ -3,3 +3,6 @@ node_modules/
 __pycache__/
 demo/out/
 .claude/worktrees/
+test-results/
+playwright-report/
+coverage/

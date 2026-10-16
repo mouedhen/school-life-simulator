@@ -9,10 +9,12 @@ Version publiée en Artifact privé : https://claude.ai/artifact/QnwPwuyEGtGECqn
 
 ## Commandes
 
-- `python3 build.py` : assemble `src/*` en `dist/index.html` (~817 Ko). Ouvrir ce fichier dans un navigateur pour jouer.
-- `python3 mergefr.py` : fusionne `tr/out_*.json` dans `src/fr.js` (~4 200 entrées, fichiers lus par ordre alphabétique : une clé en double est écrasée par le fichier suivant). À relancer après toute modification des traductions, puis `build.py`.
-- **Sous Windows (cette machine)** : `python3` est le raccourci du Microsoft Store et ne fonctionne pas ; utiliser `python` (3.15). Les scripts font `open()` sans `encoding` : ils comptent sur l'UTF-8 par défaut de Python 3.15.
-- **Déploiement** : `.github/workflows/pages.yml` publie `dist/` tel quel sur GitHub Pages à chaque push sur `main`/`master`. La CI ne lance **pas** `build.py` : il faut reconstruire et committer `dist/index.html`. Vérification du site en ligne : `SLS_URL=<url> python tests/live_check.py en|fr`.
+Outillage : Node ≥ 22 uniquement (`npm install` une fois, puis `npx playwright install chromium` pour les tests navigateur).
+
+- `npm run build` : assemble `src/*` en `dist/index.html` (~1 Mo). Ouvrir ce fichier dans un navigateur pour jouer. `npm run build:check` vérifie qu'il est à jour (CI).
+- `npm run fr` : fusionne `tr/out_*.json` dans `src/fr.js` (fichiers lus par ordre alphabétique : une clé en double est écrasée par le fichier suivant). À relancer après toute modification des traductions, puis `npm run build`. `npm run fr:check` en CI.
+- `npm test` (tests unitaires + golden master), `npm run test:e2e` (navigateur), `npm run lint` (ESLint + noms non définis/inutilisés entre les morceaux, `scripts/lint-bundles.mjs`), `npm run format`.
+- **Déploiement** : `.github/workflows/pages.yml` publie `dist/` sur GitHub Pages à chaque push sur `main`/`master`. Il faut reconstruire et committer `dist/index.html`. Vérification du site en ligne : `SLS_URL=<url> python tests/live_check.py en|fr`.
 
 ## Architecture
 
