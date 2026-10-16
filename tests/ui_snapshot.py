@@ -4,7 +4,7 @@ Plays a fixed, seeded path in EN and FR, visits every tab and the main modals, a
 so two runs of the same build give the same HTML.
 Usage:  python tests/ui_snapshot.py record   -> writes tests/ui_snapshot.json
         python tests/ui_snapshot.py          -> compares with tests/ui_snapshot.json, prints the first difference"""
-import sys, json, pathlib, difflib
+import sys, re, json, pathlib, difflib
 from playwright.sync_api import sync_playwright
 from ui_helpers import URL, launch, ADV, TOFREE
 
@@ -111,7 +111,17 @@ if RECORD:
     print('recorded %d screens to %s' % (len(shots), SNAP.name))
     sys.exit(0)
 
+# jFit sizes journal pages from the rendered text height, which depends on the system fonts (web fonts are
+# blocked here), so it differs between OSes: drop what jFit computes (page font size, hidden optional lines).
+def norm(h):
+    h = re.sub(r' style="font-size: [\d.]+px;"', '', h)
+    return h.replace(' style="display: none;"', '').replace(' style=""', '')
+for snap in (shots,):
+    for x in snap:
+        for part in ('root', 'ov'): x[part] = norm(x[part])
 old = json.loads(SNAP.read_text(encoding='utf-8'))
+for x in old:
+    for part in ('root', 'ov'): x[part] = norm(x[part])
 on = [s['name'] for s in old]; nn = [s['name'] for s in shots]
 if on != nn:
     print('DIFF screen list differs:', [x for x in on if x not in nn], [x for x in nn if x not in on], on[:3] if not nn else '')
