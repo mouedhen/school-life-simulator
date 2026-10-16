@@ -1408,26 +1408,38 @@ function personalEvent(S, p, ctx) {
   if (p.mood === 'friendly') {
     const hobby = ['a poster', 'a short story', 'a science project', 'a playlist', 'a model craft', 'a comic', 'a dance routine', 'a recipe'];
     const what = hobby[hash(ch + S.di) % hobby.length];
-    return { kind: 'personal', title: ch + ' asks for help', desc: ch + ' is working on ' + what + ' and asks if you can lend a hand. (Friendly event.)', ctx, who, choices: [
-      { l: 'A', x: 'Help out for a while (uses 1 time block)', fx: fxs('r:T+6'), block: 1 },
-      { l: 'B', x: 'Offer quick tips', fx: fxs('r:T+3') },
-      { l: 'C', x: 'Say you are busy today', fx: fxs('r:T-1') },
-    ] };
+    return {
+      kind: 'personal', title: ch + ' asks for help',
+      desc: ch + ' is working on ' + what + ' and asks if you can lend a hand. (Friendly event.)',
+      ctx, who, choices: [
+        { l: 'A', x: 'Help out for a while (uses 1 time block)', fx: fxs('r:T+6'), block: 1 },
+        { l: 'B', x: 'Offer quick tips', fx: fxs('r:T+3') },
+        { l: 'C', x: 'Say you are busy today', fx: fxs('r:T-1') },
+      ],
+    };
   }
   if (p.mood === 'tense') {
-    return { kind: 'personal', title: 'A misunderstanding with ' + ch, desc: 'Something you said got twisted around, and ' + ch + ' is giving you the cold shoulder. (Tense event.)', ctx, who, choices: [
-      { l: 'A', x: 'Clear things up calmly', fx: fxs('r:T+7;f:RECONCILE_TRIED') },
-      { l: 'B', x: 'Ignore it and hope it passes', fx: fxs('r:T-2;f:AVOIDED_REPAIR') },
-      { l: 'C', x: 'Tell them they are overreacting', fx: fxs('r:T-5;p-1?.3') },
-      { l: 'D', x: 'Calmly refuse to take the blame for something you did not do', fx: fxs('r:T+2;f:REFUSED_BLAME') },
-    ] };
+    return {
+      kind: 'personal', title: 'A misunderstanding with ' + ch,
+      desc: 'Something you said got twisted around, and ' + ch + ' is giving you the cold shoulder. (Tense event.)',
+      ctx, who, choices: [
+        { l: 'A', x: 'Clear things up calmly', fx: fxs('r:T+7;f:RECONCILE_TRIED') },
+        { l: 'B', x: 'Ignore it and hope it passes', fx: fxs('r:T-2;f:AVOIDED_REPAIR') },
+        { l: 'C', x: 'Tell them they are overreacting', fx: fxs('r:T-5;p-1?.3') },
+        { l: 'D', x: 'Calmly refuse to take the blame for something you did not do', fx: fxs('r:T+2;f:REFUSED_BLAME') },
+      ],
+    };
   }
-  return { kind: 'personal', title: ch + ' confronts you', desc: ch + ' blocks your path at your locker. The hallway goes quiet. (Enemy event.)', ctx, who, choices: [
-    { l: 'A', x: 'De-escalate and apologize', fx: fxs('r:T+8;f:APOLOGIZED_SPECIFIC;f:RECONCILE_TRIED') },
-    { l: 'B', x: 'Stand your ground', fx: fxs('r:T-4;p+1?.5') },
-    { l: 'C', x: 'Walk away', fx: fxs('r:T-1;f:AVOIDED_REPAIR') },
-    { l: 'D', x: 'Argue back loudly', fx: fxs('r:T-7;p-2?.6;f:PUBLIC_JAB') },
-  ] };
+  return {
+    kind: 'personal', title: ch + ' confronts you',
+    desc: ch + ' blocks your path at your locker. The hallway goes quiet. (Enemy event.)',
+    ctx, who, choices: [
+      { l: 'A', x: 'De-escalate and apologize', fx: fxs('r:T+8;f:APOLOGIZED_SPECIFIC;f:RECONCILE_TRIED') },
+      { l: 'B', x: 'Stand your ground', fx: fxs('r:T-4;p+1?.5') },
+      { l: 'C', x: 'Walk away', fx: fxs('r:T-1;f:AVOIDED_REPAIR') },
+      { l: 'D', x: 'Argue back loudly', fx: fxs('r:T-7;p-2?.6;f:PUBLIC_JAB') },
+    ],
+  };
 }
 
 /* ---------- choosing ---------- */
@@ -1649,7 +1661,8 @@ function ballScene(S, st) {
   });
   if (st === 0) {
     const lend = knownRank(S, metKids(S)).find(n => S.rel[n] >= 20);
-    return mk('The Ball — What to wear', 'Ball night. The gym is full of paper lanterns and the smell of hairspray. Nobody should miss tonight over money, and everybody knows it. ' + dateTxt, [
+    const desc = 'Ball night. The gym is full of paper lanterns and the smell of hairspray. Nobody should miss tonight over money, and everybody knows it. ' + dateTxt;
+    return mk('The Ball — What to wear', desc, [
       ['Buy a new outfit or accessory ($15)', 'm-15;p+1;f:BALL_OUTFIT_BOUGHT', { dis: S.money < 15 ? 'Needs $15' : null }],
       ['Wear something you already own, and own it', 'f:BALL_OWN_OUTFIT'],
       lend ? ['Borrow an outfit from ' + lend, 'r:' + lend + '+3;f:BALL_BORROWED'] : ['Borrow something from your sibling or parent', 'f:BALL_BORROWED'],
@@ -1659,7 +1672,8 @@ function ballScene(S, st) {
   }
   if (st === 1) {
     const other = ctx.T === fr ? ctx.C : ctx.T;
-    return mk('The Ball — The dance floor', 'The music starts. Some people dance, some hover by the snack table, and a few stand at the edge pretending to read their phones. ' + dateTxt, [
+    const desc = 'The music starts. Some people dance, some hover by the snack table, and a few stand at the edge pretending to read their phones. ' + dateTxt;
+    return mk('The Ball — The dance floor', desc, [
       ['Ask ' + fr + ' to dance', '', { dance: fr }],
       ['Pull a shy classmate (' + other + ') into the group dance', 'r:' + other + '+6;p-1?.4;f:INCLUDED_SOMEONE;f:BALL_INCLUDED_ONE'],
       ['Request the song everybody knows and lead the floor', 'p+2;r:G+1;f:BALL_CROWD_PLEASER'],
@@ -1683,7 +1697,8 @@ function ballScene(S, st) {
   if (st === 3) {
     const sp = knownRank(S, metKids(S)).slice(0, 3);
     const awardReq = S.pop >= 55 || S.grade >= 75 ? null : 'Needs Pop 55 or Grade 75';
-    return mk('The Ball — Photos and spotlight', 'The photographer waves everyone over, and the principal announces a Class Spirit award with a short speech. The spotlight swings around the room.', [
+    const desc = 'The photographer waves everyone over, and the principal announces a Class Spirit award with a short speech. The spotlight swings around the room.';
+    return mk('The Ball — Photos and spotlight', desc, [
       ['Gather everyone for one big group photo', 'r:G+3;f:INCLUSIVE_PHOTO'],
       ['Pose only with the popular group', 'p+2;r:G-3;f:PHOTO_CLIQUE'],
       ['Accept the award and thank everyone by name', 'p+1;r:TOP+3;f:SHARED_SPOTLIGHT', { req: awardReq }],
@@ -3093,8 +3108,13 @@ function checks(S) {
   const top = K.filter(c => c.pop >= 80).map(c => c.n);
   const cntIn = (arr, f) => arr.filter(n => f(rel(n))).length;
   const sumF = a => a.reduce((n, f) => n + (F(S, f) || 0), 0);
-  const cruel = sumF(['PUBLIC_JAB', 'PUBLIC_MOCKERY', 'MOCKED_WORK', 'MOCKED_INTEREST', 'LASTING_INSULT', 'FINAL_CRUELTY', 'CRUEL_CARD_PRANK', 'POOR_SPORTSMANSHIP', 'GIFT_MOCKERY']);
-  const volunteer = sumF(['EARTH_DAY_HELP', 'FIELD_DAY_SUPPORT', 'QUIET_KINDNESS', 'MIDYEAR_HELP', 'MADE_SPACE', 'BALL_BACKSTAGE', 'PLANT_CARE', 'WINTER_INCLUSIVE']) + S.jobsDone;
+  const cruel = sumF([
+    'PUBLIC_JAB', 'PUBLIC_MOCKERY', 'MOCKED_WORK', 'MOCKED_INTEREST', 'LASTING_INSULT', 'FINAL_CRUELTY', 'CRUEL_CARD_PRANK',
+    'POOR_SPORTSMANSHIP', 'GIFT_MOCKERY',
+  ]);
+  const volunteer = sumF([
+    'EARTH_DAY_HELP', 'FIELD_DAY_SUPPORT', 'QUIET_KINDNESS', 'MIDYEAR_HELP', 'MADE_SPACE', 'BALL_BACKSTAGE', 'PLANT_CARE', 'WINTER_INCLUSIVE',
+  ]) + S.jobsDone;
   const posF = x.kind + sumF(['SINCERE_COMPLIMENT', 'GRACIOUS_AWARD', 'SHARED_CREDIT']);
   const negF = cruel + sumF(['BLAME_SHIFT', 'STOLE_CREDIT', 'GOSSIP', 'GRADE_LIE', 'HYPOCRISY', 'BALL_EXCLUSION']);
   const betray = K.filter(c => S.rel[c.n] < -50).map(c => c.n);
@@ -3641,11 +3661,23 @@ function phoneGroupIncoming(S) {
   } else if (h % 3 === 0) { // gossip about b: defend, laugh along, or stay out
     const neg = CH[b].rum.filter(r => r[0] === 'neg');
     const rm = neg.length ? neg[h % neg.length][1] : CH[b].rum[0][1];
-    m = { f: 'them', s: fa, t: 'Did you see this? “' + rm + '”', q: [['Defend ' + fb, 'r:T+5;p-1'], ['Laugh along', 'p+1;r:T-4'], ['Stay out of it', 'r:T+0']], T: b, id: S.di };
+    m = {
+      f: 'them', s: fa, t: 'Did you see this? “' + rm + '”',
+      q: [['Defend ' + fb, 'r:T+5;p-1'], ['Laugh along', 'p+1;r:T-4'], ['Stay out of it', 'r:T+0']],
+      T: b, id: S.di,
+    };
   } else if (h % 3 === 1) {
-    m = { f: 'them', s: fa, t: 'Someone posted a photo of today’s cafeteria mystery meat.', q: [['Send a laughing emoji', 'r:T+1'], ['Ignore it', 'r:T+0']], T: a, id: S.di };
+    m = {
+      f: 'them', s: fa, t: 'Someone posted a photo of today’s cafeteria mystery meat.',
+      q: [['Send a laughing emoji', 'r:T+1'], ['Ignore it', 'r:T+0']],
+      T: a, id: S.di,
+    };
   } else {
-    m = { f: 'them', s: fa, t: 'Anyone coming to the library after school?', q: [['I am in', 'r:T+3'], ['Not today, sorry', 'r:T+0']], T: a, id: S.di };
+    m = {
+      f: 'them', s: fa, t: 'Anyone coming to the library after school?',
+      q: [['I am in', 'r:T+3'], ['Not today, sorry', 'r:T+0']],
+      T: a, id: S.di,
+    };
   }
   th.push(m);
   trimThread(th);
