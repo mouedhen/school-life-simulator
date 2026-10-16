@@ -1,4 +1,4 @@
-require('./data.js'); require('./talk.js'); const E=require('./engine.js');
+if(process.env.NO_NPC)globalThis.__NO_NPC=1; require('../../src/data.js'); require('../../src/talk.js'); const E=require('../../src/engine.js');
 const NICE=['talk','compliment','hangout','group','study','askhelp','lend','share','defend','apologize','advice','lunch','message','cheer','collab','reconcile','secret','talkabout','joingroup','investigate','boundary'];
 const MEAN=['insult','prank','fight','tease','start','end','debate','askmoney'];
 function run(seed){
@@ -30,7 +30,9 @@ function run(seed){
   }
   return S;
 }
-const N=+process.argv[2]||600; const res={}, any={}; let over=0;
-for(let s=1;s<=N;s++){ const S=run(s); if(S.over){over++;continue;} const id=S.ending.id; res[id]=(res[id]||0)+1; S.ending.all.forEach(a=>any[a]=(any[a]||0)+1); }
+const N=+process.argv[2]||600; const res={}, any={}; let over=0, money=0, pop=0, grade=0, n=0, npc=0;
+for(let s=1;s<=N;s++){ const S=run(s); if(S.over){over++;continue;} n++; money+=S.money; pop+=S.pop; grade+=S.grade; npc+=Object.keys(S.giftFrom||{}).length; const id=S.ending.id; res[id]=(res[id]||0)+1; S.ending.all.forEach(a=>any[a]=(any[a]||0)+1); }
 const ids=E.ENDINGS.map(e=>e.id); const never=ids.filter(i=>!any[i]);
-console.log('runs',N,'gameover',over); console.log(Object.entries(res).sort((a,b)=>b[1]-a[1]).map(([k,v])=>k+':'+v).join(' ')); console.log('ANY:',Object.entries(any).sort((a,b)=>b[1]-a[1]).map(([k,v])=>k+':'+v).join(' '));console.log('NEVER ('+never.length+'/'+ids.length+'):',never.join(' '));
+console.log((globalThis.__NO_NPC?'NPC OFF':'NPC ON')+' runs',N,'gameover',over,'finished',n);
+console.log('avg money',(money/n).toFixed(1),'pop',(pop/n).toFixed(1),'grade',(grade/n).toFixed(1),'avg givers',(npc/n).toFixed(1));
+console.log('endings reached (any):',ids.length-never.length,'/',ids.length); console.log('never:',never.join(' '));

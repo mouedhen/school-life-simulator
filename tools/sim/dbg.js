@@ -1,4 +1,4 @@
-require('./data.js'); const E=require('./engine.js');
+require('../../src/data.js'); const E=require('../../src/engine.js');
 const S=E.newGame(5);let n=0;const rnd=E.mul(9);let guard=0;const cnt={};
 while(!S.over&&S.phase!=='ending'&&guard++<4000){
  if(S.phase==='event'){const ev=E.buildEvent(S);E.choose(S,ev.choices.findIndex(c=>!c.disabled));}

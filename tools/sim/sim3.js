@@ -1,4 +1,4 @@
-require('./data.js'); require('./talk.js'); const E=require('./engine.js');
+require('../../src/data.js'); require('../../src/talk.js'); const E=require('../../src/engine.js');
 function hermit(seed){const S=E.newGame(seed);let g=0;
  while(!S.over&&S.phase!=='ending'&&g++<5000){
   if(S.phase==='event'){const ev=E.buildEvent(S);const ok=ev.choices.map((c,i)=>i).filter(i=>!ev.choices[i].disabled);

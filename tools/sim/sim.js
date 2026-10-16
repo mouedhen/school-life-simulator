@@ -1,4 +1,4 @@
-require('./data.js'); require('./talk.js'); const E=require('./engine.js');
+require('../../src/data.js'); require('../../src/talk.js'); const E=require('../../src/engine.js');
 function run(seed, bot){
   const S=E.newGame(seed); let guard=0;
   const rnd=E.mul(seed*7+3);
@@ -8,7 +8,7 @@ function run(seed, bot){
       const ok=ev.choices.map((c,i)=>i).filter(i=>!ev.choices[i].disabled);
       let i;
       if(bot==='random') i=ok[Math.floor(rnd()*ok.length)];
-      else if(bot==='kind') i=ok[0]; else if(bot==='saint'){ i=ok.find(j=>!(ev.choices[j].fx||[]).some(f=>f.t==='gossip'||f.f==='FOLLOWED_HIERARCHY'||f.f==='GOSSIP')&&!JSON.stringify(ev.choices[j]).match(/gossip|Spread|rumou?r/i))??ok[0]; }
+      else if(bot==='kind'||bot==='saint') i=ok[0];
       else if(bot==='mean') i=ok[ok.length-1];
       else i=ok[Math.floor(rnd()*ok.length)];
       E.choose(S,i,ev.choices[i].gift?E.giftItems(S)[0].n:undefined);
@@ -35,8 +35,7 @@ function run(seed, bot){
 const bots=process.argv[2]?[process.argv[2]]:['random','kind','mean'];
 for(const bot of bots){
   const res={};let over=0,pops=[],grades=[],mon=[];
-  for(let s=1;s<=60;s++){const S=run(s,bot); if(process.env.ST&&!S.over){const x=E.stats?E.stats(S):null; if(x) (global.A=global.A||[]).push([x.c50,x.min20,S.started,S.flags.GOSSIP|0,S.flags.FOLLOWED_HIERARCHY|0]);} if(S.over){over++; res['GAME OVER pop@day'+Math.round(S.di/20)*20]=(res['GAME OVER pop@day'+Math.round(S.di/20)*20]||0)+1;} else {const id=S.ending.id; res[id]=(res[id]||0)+1; pops.push(S.pop);grades.push(S.grade);mon.push(S.money);} }
+  for(let s=1;s<=60;s++){const S=run(s,bot); if(S.over){over++; res['GAME OVER pop@day'+Math.round(S.di/20)*20]=(res['GAME OVER pop@day'+Math.round(S.di/20)*20]||0)+1;} else {const id=S.ending.id; res[id]=(res[id]||0)+1; pops.push(S.pop);grades.push(S.grade);mon.push(S.money);} }
   const avg=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):0;
   console.log(bot,'over',over,'/60','avgPop',avg(pops),'avgGrade',avg(grades),'avgMoney',avg(mon)); console.log(res);
 }
-if(process.env.ST) console.log(JSON.stringify((global.A||[]).slice(0,8)));

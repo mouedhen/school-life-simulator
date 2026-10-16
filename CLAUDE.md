@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # School Life Simulator (marque « savepoint »)
 
 Jeu de simulation de vie scolaire dans un **seul fichier HTML**, bilingue EN/FR. Pas de framework, pas de dépendances runtime (seules les polices Google Fonts sont chargées en ligne).
@@ -6,7 +10,9 @@ Version publiée en Artifact privé : https://claude.ai/artifact/QnwPwuyEGtGECqn
 ## Commandes
 
 - `python3 build.py` : assemble `src/*` en `dist/index.html` (~817 Ko). Ouvrir ce fichier dans un navigateur pour jouer.
-- `python3 mergefr.py` : fusionne `tr/out_*.json` dans `src/fr.js` (~4 200 entrées). À relancer après toute modification des traductions, puis `build.py`.
+- `python3 mergefr.py` : fusionne `tr/out_*.json` dans `src/fr.js` (~4 200 entrées, fichiers lus par ordre alphabétique : une clé en double est écrasée par le fichier suivant). À relancer après toute modification des traductions, puis `build.py`.
+- **Sous Windows (cette machine)** : `python3` est le raccourci du Microsoft Store et ne fonctionne pas ; utiliser `python` (3.15). Les scripts font `open()` sans `encoding` : ils comptent sur l'UTF-8 par défaut de Python 3.15.
+- **Déploiement** : `.github/workflows/pages.yml` publie `dist/` tel quel sur GitHub Pages à chaque push sur `main`/`master`. La CI ne lance **pas** `build.py` : il faut reconstruire et committer `dist/index.html`. Vérification du site en ligne : `SLS_URL=<url> python tests/live_check.py en|fr`.
 
 ## Architecture
 
@@ -18,8 +24,7 @@ Rien n'est importé : tout partage la portée globale du navigateur, l'ordre com
 - `talk.js` : dialogues.
 - `engine.js` : moteur pur (IIFE), sans DOM. RNG avec graine. DSL d'effets, ex. `fxs("p+2;r:T+6;f:FLAG")` (p = popularité, r:ROLE+n = relation, f:FLAG = drapeau). Fins de personnage décrites par `CHEND` et évaluées par `reqOk`. `checks(S)` / `BROAD` fixent la priorité : une fin de personnage n'apparaît en épilogue que si aucune fin générale ne se déclenche.
 - `app.js` : interface, journal, modales, réglages, son, voix, clavier.
-- `sim.js`, `sim2.js` (équilibrage), `sim3.js` (joueur « ermite ») dans `src/` : simulations en Node du moteur.
-- `src/*.py`, `*.txt`, `dbg.js`, `keys.js`, `kinds.js`, `lits.js`, `fp.txt` : outils/scripts de développement, pas inclus dans le build.
+- `src/` ne contient que les 8 fichiers du build. Les scripts de développement sont dans `tools/` (voir `tools/README.md`) : `tools/sim/` (simulations Node du moteur, encore utilisables) et `tools/archive/` (anciens correctifs et brouillons, plus maintenus). Les scripts Node chargent le moteur avec `require('../../src/data.js'); require('../../src/talk.js'); const E=require('../../src/engine.js')` puis `E.newGame(seed)`.
 
 ## Couche française
 
@@ -31,7 +36,7 @@ Rien n'est importé : tout partage la portée globale du navigateur, l'ordre com
 ## Systèmes de jeu
 
 - **Vacances** : table `HOLIDAYS` (travail, action de grâce, hiver, printemps, Pâques, patriotes) + `HOL_BY_RET`. Un événement de type `holiday` se déclenche le premier jour d'école après la pause, puis enchaîne sur l'événement normal du jour. Choix posent des drapeaux `HOL_<id>` et des relations (`PARENTS`, `MOM`, `DAD`).
-- **Fins** : ~71 fins. Fins de personnage (`CHEND`) + fins générales (`BROAD`). Fins « durée » basées sur `S.lowStreak` / `S.lowMax` (popularité ≤ 30) ; e17/e18 exigent `lowMax >= 20`. Écran « Endings » séparé en Good / Hard avec morales ; indices via `ENDBY`.
+- **Fins** : 78 fins (71 + 7 fins téléphone `ph_*`, voir plus bas). L'ordre du tableau `BROAD` est l'ordre de priorité. Fins de personnage (`CHEND`) + fins générales (`BROAD`). Fins « durée » basées sur `S.lowStreak` / `S.lowMax` (popularité ≤ 30) ; e17/e18 exigent `lowMax >= 20`. Écran « Endings » séparé en Good / Hard avec morales ; indices via `ENDBY`.
 - **Journal** : pages à écriture manuscrite (Dancing Script / Patrick Hand), `jPageHtml` puis `jFit` : réduit la police jusqu'à 0.88, masque les éléments optionnels (`data-opt` 1/2/3), puis réduit jusqu'à 0.62. Refit après chaque retournement de page et au chargement des polices. `.pg .inner` a `overflow:hidden`.
 - **Voix** : `speechSynthesis` du navigateur (synthétique, pas de comédiens), pour le bal, les événements « special » et les fins ; hauteur/voix selon le genre du locuteur ; bouton « Listen ».
 - **Musique** : module `Music` dans `app.js`, générée en direct (WebAudio, aucun fichier). 3 ambiances en fondu : `calm` (classe), `bright` (bal, congés, bonnes fins), `dark` (popularité ≤ 30, mauvaises fins), choisies par `musMood()`. Démarre au premier clic ; réglage `PREF.mus`.
@@ -67,7 +72,7 @@ Rien n'est importé : tout partage la portée globale du navigateur, l'ordre com
 
 ## Tests
 
-Le dossier `tests/` contient les vérifications (voir `tests/README.md`) : `node tests/engine_smoke.js` (moteur), `node tests/endings_cov.js 600` (couverture des fins ; `NO_NPC=1` pour comparer sans les actes des PNJ), `python3 tests/ui_smoke.py en|fr` (navigateur : rencontres, encre, scènes de la famille et de révélation), `python3 tests/stress.py en|fr 1 4` (années complètes), `python3 tests/fr_miss.py` (chaînes sans traduction française). À lancer après `python3 build.py`. Mesure de référence (2 500 parties de bots) : 59/71 fins atteintes avec ou sans les actes des PNJ ; argent/POP/note moyens à ±1 point.
+Le dossier `tests/` contient les vérifications (voir `tests/README.md`) : **`node tests/golden.js`** (golden master : doit afficher `OK` après toute refactorisation pure ; `record` seulement après un changement de gameplay voulu), `node tests/engine_smoke.js` (moteur), `node tests/endings_cov.js 600` (couverture des fins ; `NO_NPC=1` pour comparer sans les actes des PNJ), `python3 tests/ui_smoke.py en|fr` (navigateur : rencontres, encre, scènes de la famille et de révélation), `python3 tests/stress.py en|fr 1 4` (années complètes), `python3 tests/fr_miss.py` (chaînes sans traduction française), `python3 tests/phone_smoke.py en|fr`, `python3 tests/phone_games.py en|fr` (~40 s), `python3 tests/live_check.py en|fr`. Les tests navigateur demandent Playwright + Chromium (`CHROMIUM=/chemin` sinon). À lancer après `python3 build.py`. Mesure de référence (2 500 parties de bots) : 59/71 fins atteintes avec ou sans les actes des PNJ ; argent/POP/note moyens à ±1 point.
 
 ## Décisions
 
