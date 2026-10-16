@@ -2704,38 +2704,115 @@ function viewWork() {
 }
 
 /* ---------- Calendar tab ---------- */
-const HOLI = { '2026-09-07': 'Labour Day', '2026-10-12': 'Thanksgiving', '2027-03-26': 'Good Friday', '2027-03-29': 'Easter Mon.', '2027-05-24': 'Victoria Day' };
-const EVTAG = { '2026-08-28': 'First day', '2026-10-23': 'Spirit day', '2026-10-30': 'Halloween', '2026-12-11': 'Concert', '2026-12-18': 'Winter party', '2027-01-04': 'Welcome back', '2027-02-12': 'Friendship', '2027-03-25': 'Spirit day', '2027-04-23': 'Earth Day', '2027-05-28': 'Final project', '2027-06-11': 'Finals', '2027-06-16': 'Ball plan', '2027-06-23': 'Last day' };
-const MONTHS = [[2026, 7], [2026, 8], [2026, 9], [2026, 10], [2026, 11], [2027, 0], [2027, 1], [2027, 2], [2027, 3], [2027, 4], [2027, 5]];
+const HOLI = {
+  '2026-09-07': 'Labour Day',
+  '2026-10-12': 'Thanksgiving',
+  '2027-03-26': 'Good Friday',
+  '2027-03-29': 'Easter Mon.',
+  '2027-05-24': 'Victoria Day',
+};
+const EVTAG = {
+  '2026-08-28': 'First day',
+  '2026-10-23': 'Spirit day',
+  '2026-10-30': 'Halloween',
+  '2026-12-11': 'Concert',
+  '2026-12-18': 'Winter party',
+  '2027-01-04': 'Welcome back',
+  '2027-02-12': 'Friendship',
+  '2027-03-25': 'Spirit day',
+  '2027-04-23': 'Earth Day',
+  '2027-05-28': 'Final project',
+  '2027-06-11': 'Finals',
+  '2027-06-16': 'Ball plan',
+  '2027-06-23': 'Last day',
+};
+const MONTHS = [
+  [2026, 7],
+  [2026, 8],
+  [2026, 9],
+  [2026, 10],
+  [2026, 11],
+  [2027, 0],
+  [2027, 1],
+  [2027, 2],
+  [2027, 3],
+  [2027, 4],
+  [2027, 5],
+];
 const MN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const MNF = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const MNF = [
+  'janvier',
+  'février',
+  'mars',
+  'avril',
+  'mai',
+  'juin',
+  'juillet',
+  'août',
+  'septembre',
+  'octobre',
+  'novembre',
+  'décembre',
+];
 function viewCal() {
-  const [y, m] = MONTHS[V.calM]; const cur = E.dayOf(S).d;
-  const first = new Date(Date.UTC(y, m, 1)); const n = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const [y, m] = MONTHS[V.calM];
+  const cur = E.dayOf(S).d;
+  const first = new Date(Date.UTC(y, m, 1));
+  const n = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
   const lead = (first.getUTCDay() + 6) % 7;
-  const tabs = MONTHS.map((mm, i) => `<button class="${i === V.calM ? 'on' : ''}" data-act="calm" data-v="${i}">${MN[mm[1]].toUpperCase()}</button>`).join('');
+  const tabs = MONTHS.map(
+    (mm, i) =>
+      `<button class="${i === V.calM ? 'on' : ''}" data-act="calm" data-v="${i}">${MN[mm[1]].toUpperCase()}` +
+      `</button>`,
+  ).join('');
   let cells = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(x => `<div class="wd">${x}</div>`).join('');
   for (let i = 0; i < lead; i++) cells += '<div></div>';
-  const sched = {}; DAYS.forEach(d => sched[d.d] = d);
+  const sched = {};
+  DAYS.forEach(d => (sched[d.d] = d));
   for (let d = 1; d <= n; d++) {
     const iso = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const wd = new Date(iso + 'T12:00:00Z').getUTCDay(); const wk = wd === 0 || wd === 6;
-    const sd = sched[iso]; let cls = 'cell'; let tag = ''; let extra = '';
+    const wd = new Date(iso + 'T12:00:00Z').getUTCDay();
+    const wk = wd === 0 || wd === 6;
+    const sd = sched[iso];
+    let cls = 'cell';
+    let tag = '';
+    let extra = '';
     const sk = E.D.days && Object.keys(E.SPECIAL).find(k => E.SPECIAL[k].date === iso);
-    if (HOLI[iso]) { cls += ' hol'; tag = HOLI[iso]; } else if (!sd || wk) { cls += ' off'; }
-    if (iso >= '2026-12-21' && iso <= '2027-01-01' && !wk) { cls += ' hol'; tag = tag || 'Break'; }
-    if (iso >= '2027-03-01' && iso <= '2027-03-05') { cls += ' hol'; tag = 'Spring break'; }
+    if (HOLI[iso]) {
+      cls += ' hol';
+      tag = HOLI[iso];
+    } else if (!sd || wk) {
+      cls += ' off';
+    }
+    if (iso >= '2026-12-21' && iso <= '2027-01-01' && !wk) {
+      cls += ' hol';
+      tag = tag || 'Break';
+    }
+    if (iso >= '2027-03-01' && iso <= '2027-03-05') {
+      cls += ' hol';
+      tag = 'Spring break';
+    }
     if (EVTAG[iso]) tag = EVTAG[iso];
     if (sk && iso !== '2027-03-01') tag = `<span class="pd">Pédago</span>`;
     if (iso === '2027-03-01') tag = `<span class="pd">Pédago</span>`;
     if (iso === cur) cls += ' today';
     const passed = iso < cur;
     if (passed) extra += `<svg class="x" viewBox="0 0 40 40"><path d="M6 7 L34 33 M34 7 L6 34"/></svg>`;
-    if (iso === E.BALL_DAY) extra += `<svg class="ring" viewBox="0 0 40 40"><ellipse cx="20" cy="20" rx="17" ry="15"/></svg>`;
+    if (iso === E.BALL_DAY)
+      extra += `<svg class="ring" viewBox="0 0 40 40"><ellipse cx="20" cy="20" rx="17" ry="15"/></svg>`;
     cells += `<div class="${cls}">${d}${tag ? `<div class="tg">${tag}</div>` : ''}${extra}</div>`;
   }
-  const title = LANG === 'fr' ? `${MNF[m]} ${y}` : `${new Date(Date.UTC(y, m, 1)).toLocaleDateString('en-CA', { month: 'long', year: 'numeric', timeZone: 'UTC' })}`;
-  return `<div class="cal-tabs">${tabs}</div><div class="card"><h3 style="margin-bottom:10px">${esc(title)}</h3><p class="small" style="margin:-4px 0 8px">${inkHtml('k5', CLUES().k5)}</p><div class="cal">${cells}</div><div class="legend"><span>✕ ${t('Crossed days')}</span><span><span class="pd" style="background:#3b6fd4;color:#fff;border-radius:3px;padding:0 4px;font-size:11px">${t('Pédago')}</span></span><span>◯ ${t('The Ball')}</span><span>▒ ${t('Holiday')}</span></div></div>`;
+  const title =
+    LANG === 'fr'
+      ? `${MNF[m]} ${y}`
+      : `${new Date(Date.UTC(y, m, 1)).toLocaleDateString('en-CA', { month: 'long', year: 'numeric', timeZone: 'UTC' })}`;
+  return (
+    `<div class="cal-tabs">${tabs}</div><div class="card"><h3 style="margin-bottom:10px">${esc(title)}` +
+    `</h3><p class="small" style="margin:-4px 0 8px">${inkHtml('k5', CLUES().k5)}</p>` +
+    `<div class="cal">${cells}</div><div class="legend"><span>✕ ${t('Crossed days')}</span><span>` +
+    `<span class="pd" style="background:#3b6fd4;color:#fff;border-radius:3px;padding:0 4px;font-size:11px">${t('Pédago')}` +
+    `</span></span><span>◯ ${t('The Ball')}</span><span>▒ ${t('Holiday')}</span></div></div>`
+  );
 }
 
 /* ---------- Menu tab ---------- */
