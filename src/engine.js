@@ -546,7 +546,7 @@ const NOTICE = [
 ];
 function noticeEvent(S, p, ctx) {
   const ch = p.who, f = ch.split(' ')[0], n = NOTICE[Math.min(p.lvl || 0, NOTICE.length - 1)];
-  return { kind: 'notice', title: f + ' notices something', desc: n.d(f), ctx, who: [{ role: 'With', names: [ch] }], choices: n.c.map((c, i) => ({ l: 'ABCDEF'[i], x: c[0], fx: fxs(c[1]), say: c[2](f) })) };
+  return { kind: 'notice', title: f + ' notices something', desc: n.d(f), ctx, who: [{ role: 'With', names: [ch] }], choices: n.c.map((c, i) => ({ l: letter(i), x: c[0], fx: fxs(c[1]), say: c[2](f) })) };
 }
 
 /* ---------- NPC acts ---------- */
@@ -575,7 +575,7 @@ function npcPick(S) {
 function npcEvent(S, p, ctx) {
   const ch = p.who, tch = CH[ch].role === 'teach', f = tch ? ch.split(' ')[0] + ' ' + ch.split(' ').slice(-1)[0] : ch.split(' ')[0], v = hash(ch + S.di + p.act), fam = CH[ch].role === 'fam';
   const base = { kind: 'npc', ctx, who: [{ role: 'With', names: [ch] }] };
-  const mk = (list, extra) => list.map((c, i) => Object.assign({ l: 'ABCDEF'[i], x: c[0], fx: fxs(c[1]) }, c[2] || {}));
+  const mk = (list, extra) => list.map((c, i) => Object.assign({ l: letter(i), x: c[0], fx: fxs(c[1]) }, c[2] || {}));
   let r;
   if (p.act === 'compliment') {
     const K = [f + ' stops you by the lockers. “I just wanted to say you are good at making people feel welcome.”', f + ' leans over in class and whispers. “Nice work today. I mean it.”', f + ' slides a sticky note onto your desk. It says: “You are funny when you are not even trying.”', f + ' catches your eye across the cafeteria. “Your laugh is contagious, you know that?”'];
@@ -605,7 +605,7 @@ function npcEvent(S, p, ctx) {
     r = { title: f + ' asks for your advice', desc: K[v % K.length], choices: mk([['Give honest, kind advice', 'r:T+4;f:GAVE_ADVICE'], ['Make a joke to lighten the mood', 'r:T+1'], ['Say you are not sure and ask more questions', 'r:T+3']]) };
   } else if (p.act === 'borrow') r = { title: f + ' needs a small favour', desc: f + ' pats their pockets. “I forgot my lunch money. Could you lend me $5? I will pay you back.”', choices: mk([['Lend $5', 'm-5;r:T+4', { loan: 5 }], ['Lend $2 only', 'm-2;r:T+2', { loan: 2 }], ['Say you are short on money', 'r:T-1']]) };
   else if (p.act === 'praise') r = { title: f + ' notices your effort', desc: f + ' hands back your work. “This was thoughtful. Keep going.”', choices: mk([['Thank them and say you worked hard', 'r:T+3;g+1'], ['Ask for tips to improve', 'r:T+4;f:ASKED_FOR_HELP'], ['Smile and say nothing', 'r:T+1']]) };
-  r.choices.forEach(o => { const need = cost(o.fx); if (need > S.money) { o.disabled = true; o.why = 'Needs $' + need; } });
+  r.choices.forEach(o => needMoney(S, o, cost(o.fx)));
   return Object.assign(base, r);
 }
 
@@ -718,6 +718,11 @@ function checkOver(S) {
 function cost(list) { return (list || []).reduce((s, f) => s + (f.t === 'money' && f.v < 0 && f.p == null ? -f.v : 0), 0); }
 
 /* ---------- building events ---------- */
+const letter = i => 'ABCDEF'[i]; // choice letters A-F
+// greys out a choice the player cannot pay for
+function needMoney(S, o, need) { if (need > S.money) { o.disabled = true; o.why = 'Needs $' + need; } }
+// a day context where `who` is the Target (T) of the event
+function ctxFor(S, key, who) { const ctx = makeCtx(S, key, ''); ctx.T = who; return ctx; }
 function describeRoles(S, ctx, fxList) {
   const seen = {}; const out = [];
   fxList.forEach(f => { if (f.t === 'rel' || f.who) { const k = roleKey(f.who); if (['TOP', 'MAYA', 'RIVAL'].includes(k) || seen[k]) return; seen[k] = 1; out.push({ role: ROLELABEL[k] || k, names: resolve(S, ctx, f.who) }); } });
@@ -740,7 +745,7 @@ function buildEvent(S) {
     if (p.id === 'tribunal2') ctx.T = (S.tribT || ctx.T);
     if (p.id === 'tribunal') S.tribT = ctx.T;
     const choices = sp.c.map((c, i) => {
-      const o = { l: 'ABCDEF'[i], x: c[0], fx: fxs(c[1]), special: true }; if (c[4]) o.say = c[4];
+      const o = { l: letter(i), x: c[0], fx: fxs(c[1]), special: true }; if (c[4]) o.say = c[4];
       if (c[2] && !F(S, c[2])) o.hide = true;
       if (c[3] === 'FRIEND' && S.rel[ctx.T] < 20) { o.disabled = true; o.why = 'Needs Friend (+20) with ' + ctx.T; }
       if (c[3] === 'M4' && S.money < 4) { o.disabled = true; o.why = 'Not enough money'; }
@@ -750,7 +755,7 @@ function buildEvent(S) {
   }
   if (p.kind === 'holiday') {
     const h = HOLIDAYS[p.id]; const ctx = makeCtx(S, 'hol' + p.id, '');
-    const choices = h.c.map((c, i) => { const o = { l: 'ABCDEF'[i], x: c[0], fx: fxs(c[1]) }; const need = cost(o.fx); if (need > S.money) { o.disabled = true; o.why = 'Needs $' + need; } return o; });
+    const choices = h.c.map((c, i) => { const o = { l: letter(i), x: c[0], fx: fxs(c[1]) }; needMoney(S, o, cost(o.fx)); return o; });
     return { kind: 'holiday', id: p.id, title: h.t, desc: h.d, date: h.date || dayOf(S).d, ctx, choices, who: GIFTS.some(g => g[0] === p.id) ? [] : [{ role: 'Involved', names: [ctx.T] }] };
   }
   if (p.kind === 'rand') {
@@ -773,13 +778,12 @@ function buildEvent(S) {
     return ev;
   }
   if (p.kind === 'personal') {
-    const ch = p.who; const ctx = makeCtx(S, 'pe' + S.di + ch, ''); ctx.T = ch;
-    return personalEvent(S, p, ctx);
+    return personalEvent(S, p, ctxFor(S, 'pe' + S.di + p.who, p.who));
   }
-  if (p.kind === 'npc') { const ch = p.who; const ctx = makeCtx(S, 'npc' + S.di + ch, ''); ctx.T = ch; return npcEvent(S, p, ctx); }
-  if (p.kind === 'notice') { const ch = p.who; const ctx = makeCtx(S, 'nt' + S.di + ch, ''); ctx.T = ch; return noticeEvent(S, p, ctx); }
+  if (p.kind === 'npc') return npcEvent(S, p, ctxFor(S, 'npc' + S.di + p.who, p.who));
+  if (p.kind === 'notice') return noticeEvent(S, p, ctxFor(S, 'nt' + S.di + p.who, p.who));
   if (p.kind === 'birthday') {
-    const ch = p.who; const ctx = makeCtx(S, 'bd' + ch, ''); ctx.T = ch;
+    const ch = p.who; const ctx = ctxFor(S, 'bd' + ch, ch);
     const gifts = giftItems(S);
     const choices = [{ l: 'A', x: 'Wish them a happy birthday', fx: fxs('r:T+2;f:REMEMBERED_BIRTHDAY') }];
     if (S.money >= 4) choices.push({ l: 'B', x: 'Buy a small card and gift ($4)', fx: fxs('m-4;r:T+5;f:GIFT_GIVEN') });
@@ -791,9 +795,8 @@ function buildEvent(S) {
 }
 function decorate(S, c, ctx, i) {
   const o = Object.assign({}, c);
-  o.l = c.l || 'ABCDEF'[i];
-  const need = cost(c.fx) + cost(c.ok) + cost(c.pass);
-  if (need > S.money) { o.disabled = true; o.why = 'Needs $' + need; }
+  o.l = c.l || letter(i);
+  needMoney(S, o, cost(c.fx) + cost(c.ok) + cost(c.pass));
   if (/Attend with a close friend who accepted/.test(c.x || '') && !S.ballDate) { o.disabled = true; o.why = 'Nobody accepted your invitation'; }
   if (/^Spend \$15 on an outfit/.test(c.x || '') && S.money < 15) { o.disabled = true; o.why = 'Needs $15'; }
   if (c.sp === 'academic') o.hint = 'Study check ~' + acadChance(S) + '%';
@@ -945,7 +948,7 @@ function ballScene(S, st) {
   const ctx = makeCtx(S, 'ball' + st, ''); const fr = ballFriend(S); const foe = ballFoe(S);
   ctx.T = st === 2 ? (foe || ctx.T) : ctx.T;
   const dateTxt = S.ballDate ? S.ballDate + ' is with you tonight.' : 'You came without a date.';
-  const mk = (title, desc, rows, who) => ({ kind: 'ball', st, title, desc, ctx, who: who || [], choices: rows.map((r, i) => Object.assign({ l: 'ABCDEF'[i], x: r[0], fx: fxs(r[1] || '') }, r[2] || {})) });
+  const mk = (title, desc, rows, who) => ({ kind: 'ball', st, title, desc, ctx, who: who || [], choices: rows.map((r, i) => Object.assign({ l: letter(i), x: r[0], fx: fxs(r[1] || '') }, r[2] || {})) });
   if (st === 0) {
     const lend = knownRank(S, metKids(S)).find(n => S.rel[n] >= 20);
     return mk('The Ball — What to wear', 'Ball night. The gym is full of paper lanterns and the smell of hairspray. Nobody should miss tonight over money, and everybody knows it. ' + dateTxt, [
