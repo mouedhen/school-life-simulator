@@ -52,15 +52,25 @@
 'use strict';
 /* ---------- core lookups ---------- */
 const D = root.DATA;
-const CH = {}; D.chars.forEach(c => CH[c.n] = c);
+const CH = {}; // character by full name: { n, role: 'kid' | 'fam' | 'teach', pop, ap, mo, b, rum, ... }
+D.chars.forEach(c => CH[c.n] = c);
 const KIDS = D.chars.filter(c => c.role === 'kid').map(c => c.n);
 const FAM = D.chars.filter(c => c.role === 'fam').map(c => c.n);
 const TEACH = D.chars.filter(c => c.role === 'teach').map(c => c.n);
-const MAYA = 'Maya Bennett';
-const NDAYS = () => DAYS.length;
+const MAYA = 'Maya Bennett'; // the classmate you always know from day 1
+const NDAYS = () => DAYS.length; // (unused)
 
 /* ---------- rng ---------- */
-function hash(s) { let h = 2166136261; s = String(s); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+// FNV-1a string hash: a stable number for a string (used to pick variants without using the RNG)
+function hash(s) {
+  let h = 2166136261;
+  s = String(s);
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
 // mulberry32: the state advances by MUL_STEP, then mulOut() turns the new state into a number in [0, 1).
 const MUL_STEP = 0x6D2B79F5;
 function mulOut(a) {
@@ -82,10 +92,18 @@ function rnd(S) {
   S.rs = (S.rs + MUL_STEP) | 0;
   return mulOut(S.rs);
 }
-const ri = (S, a, b) => a + Math.floor(rnd(S) * (b - a + 1));
+const ri = (S, a, b) => a + Math.floor(rnd(S) * (b - a + 1)); // random integer a..b (inclusive)
 const pick = (S, arr) => arr[Math.floor(rnd(S) * arr.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-function shuffle(arr, r) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+// Fisher-Yates on a copy, with a local generator r
+function shuffle(arr, r) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 /* ---------- effect DSL ---------- */
 // Example: "p+2;r:C+3?.5;m-5;g+1;f:FLAG;gos+1"
@@ -106,10 +124,18 @@ function shuffle(arr, r) { const a = arr.slice(); for (let i = a.length - 1; i >
 function fxs(str) {
   if (!str) return [];
   return str.split(';').map(s => s.trim()).filter(Boolean).map(tok => {
-    let p; const q = tok.indexOf('?'); if (q > 0) { p = parseFloat(tok.slice(q + 1)); tok = tok.slice(0, q); }
+    let p;
+    const q = tok.indexOf('?');
+    if (q > 0) {
+      p = parseFloat(tok.slice(q + 1));
+      tok = tok.slice(0, q);
+    }
     let o;
     if (tok.startsWith('f:')) o = { t: 'flag', f: tok.slice(2) };
-    else if (tok.startsWith('r:')) { const m = tok.slice(2).match(/^(.*?)([+-]\d+)$/); o = { t: 'rel', who: m[1], v: +m[2] }; }
+    else if (tok.startsWith('r:')) {
+      const m = tok.slice(2).match(/^(.*?)([+-]\d+)$/);
+      o = { t: 'rel', who: m[1], v: +m[2] };
+    }
     else if (tok.startsWith('gos')) o = { t: 'gossip', v: +tok.slice(3) };
     else if (tok.startsWith('p')) o = { t: 'pop', v: +tok.slice(1) };
     else if (tok.startsWith('m')) o = { t: 'money', v: +tok.slice(1) };
@@ -121,15 +147,15 @@ function fxs(str) {
 }
 
 /* ---------- calendar ---------- */
-const DAYS = D.days.slice();
+const DAYS = D.days.slice(); // { d: 'YYYY-MM-DD', t: title, s: description, c: choices, brk?: no school }
 // spring break: the guide puts one event in Mar 1-5; we insert a virtual day
 (function () {
   const i = DAYS.findIndex(d => d.d > '2027-03-01');
   DAYS.splice(i, 0, { d: '2027-03-01', t: 'Spring break', s: 'No classes this week. Messages light up your phone.', c: [], brk: true });
 })();
-const DAYIDX = {}; DAYS.forEach((d, i) => DAYIDX[d.d] = i);
+const DAYIDX = {}; // date -> index in DAYS
+DAYS.forEach((d, i) => DAYIDX[d.d] = i);
 const BALL_DAY = '2027-06-18';
-
 /* ---------- random events ---------- */
 // RAND: the small evening events. Effects are hand-written here; titles, descriptions and
 // choice texts come from data.js (D.events, same order).
