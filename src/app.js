@@ -1271,16 +1271,36 @@ function inkStatHtml(p) {
 function viewToday() {
   const d = E.dayOf(S);
   let top = '';
-  if (S.phase === 'event') { const pe = E.buildEvent(S) || { title: d.t, desc: d.s }; top = `<div class="card"><span class="tag">${L('Event', 'Événement')}</span><h3>${esc(pe.title)}</h3><p class="muted" style="margin:6px 0 12px">${esc(pe.desc)}</p><button class="btn primary" data-act="openev">${t("Open today's event")}</button></div>`; }
-  else {
+  if (S.phase === 'event') {
+    const pe = E.buildEvent(S) || { title: d.t, desc: d.s };
+    top =
+      `<div class="card"><span class="tag">${L('Event', 'Événement')}</span><h3>${esc(pe.title)}</h3>` +
+      `<p class="muted" style="margin:6px 0 12px">${esc(pe.desc)}</p>` +
+      `<button class="btn primary" data-act="openev">${t("Open today's event")}</button></div>`;
+  } else {
     const work = `<button class="btn small" data-act="tab" data-v="work">💼 ${t('Work')}</button>`;
-    top = `<div class="card"><span class="tag alt">${t('After school')}</span><h3>${L('What now?', 'Que fais-tu maintenant ?')}</h3>
-    <p class="muted small" style="margin:4px 0 10px">${L('Actions use time blocks. When you are done, end the day.', 'Chaque action prend des blocs de temps. Quand tu as fini, termine la journée.')}</p>
-    <div class="row"><button class="btn small" data-act="study" ${S.blocks < 1 ? 'disabled' : ''}>📚 ${t('Study')} (1)</button><button class="btn small" data-act="tab" data-v="people">💬 ${t('People')}</button><button class="btn small" data-act="phone">📱 ${L('Phone', 'Téléphone')}${phBadge()}</button><button class="btn small" data-act="tab" data-v="shop">🛍 ${t('Shop')}</button>${work}</div>
-    <div class="row" style="margin-top:12px"><button class="btn primary" data-act="endday">${t('End day')} →</button></div></div>`;
+    top =
+      `<div class="card"><span class="tag alt">${t('After school')}</span>` +
+      `<h3>${L('What now?', 'Que fais-tu maintenant ?')}</h3>\n    ` +
+      `<p class="muted small" style="margin:4px 0 10px">` +
+      L(
+        'Actions use time blocks. When you are done, end the day.',
+        'Chaque action prend des blocs de temps. Quand tu as fini, termine la journée.',
+      ) +
+      `</p>\n    <div class="row">` +
+      `<button class="btn small" data-act="study" ${S.blocks < 1 ? 'disabled' : ''}>📚 ${t('Study')} (1)` +
+      `</button><button class="btn small" data-act="tab" data-v="people">💬 ${t('People')}</button>` +
+      `<button class="btn small" data-act="phone">📱 ${L('Phone', 'Téléphone')}${phBadge()}</button>` +
+      `<button class="btn small" data-act="tab" data-v="shop">🛍 ${t('Shop')}</button>${work}</div>\n    ` +
+      `<div class="row" style="margin-top:12px">` +
+      `<button class="btn primary" data-act="endday">${t('End day')} →</button></div></div>`;
   }
   const lastE = S.log.slice(-1)[0];
-  return `${top}<button class="card" data-act="tab" data-v="journal" style="width:100%;text-align:left"><h3>📖 ${t('Journal')}</h3><div class="muted small">${lastE ? esc(lastE.t) : t('Journal is empty')}</div></button>`;
+  return (
+    `${top}<button class="card" data-act="tab" data-v="journal" style="width:100%;text-align:left">` +
+    `<h3>📖 ${t('Journal')}</h3><div class="muted small">${lastE ? esc(lastE.t) : t('Journal is empty')}` +
+    `</div></button>`
+  );
 }
 /* ---------- journal: text ---------- */
 /* turns log entries ("Hang out — Maya Bennett") into first-person diary sentences */
