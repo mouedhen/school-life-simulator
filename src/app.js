@@ -2843,20 +2843,67 @@ function viewMenu() {
 }
 
 /* ---------- modals ---------- */
-function openModal(html) { V.modal = html; renderModal(); }
-function closeModal() { pgStop(); V.pg = null; V.mg = null; V.modal = null; V.res = null; V.sub = null; V.evIdx = null; V.person = null; V.evCur = null; V.savesOpen = false; renderModal(); }
+function openModal(html) {
+  V.modal = html;
+  renderModal();
+}
+function closeModal() {
+  pgStop();
+  V.pg = null;
+  V.mg = null;
+  V.modal = null;
+  V.res = null;
+  V.sub = null;
+  V.evIdx = null;
+  V.person = null;
+  V.evCur = null;
+  V.savesOpen = false;
+  renderModal();
+}
 function renderModal() {
   Music.set(musMood());
   let o = document.getElementById('ov');
-  if (!V.modal) { if (o) o.remove(); return; }
-  if (!o) { o = document.createElement('div'); o.id = 'ov'; o.className = 'overlay'; document.body.appendChild(o); o.addEventListener('click', ev => { ev.stopPropagation(); onClick(ev); }); }
-  const keep = o.querySelector('.modal'); const st = keep ? keep.scrollTop : 0;
-  o.innerHTML = `<div class="modal" role="dialog" aria-modal="true" tabindex="-1">${typeof V.modal === 'function' ? V.modal() : V.modal}</div>`;
+  if (!V.modal) {
+    if (o) o.remove();
+    return;
+  }
+  if (!o) {
+    o = document.createElement('div');
+    o.id = 'ov';
+    o.className = 'overlay';
+    document.body.appendChild(o);
+    o.addEventListener('click', ev => {
+      ev.stopPropagation();
+      onClick(ev);
+    });
+  }
+  const keep = o.querySelector('.modal');
+  const st = keep ? keep.scrollTop : 0;
+  o.innerHTML =
+    `<div class="modal" role="dialog" aria-modal="true" tabindex="-1">${typeof V.modal === 'function' ? V.modal() : V.modal}` +
+    `</div>`;
   o.querySelector('.modal').scrollTop = st;
-  if (!keep) { try { o.querySelector('.modal').focus({ preventScroll: true }); } catch (e) {} }
-  { const ev = V.evCur; if (V.res && V.res !== V.sfxRes) { V.sfxRes = V.res; SFX.forRes(V.res); if (isVoiced(ev)) Voice.say(resParts(ev, V.res)); } else if (ev && !V.res && V.voiceEv !== ev) { V.voiceEv = ev; if (ev.kind === 'ball') SFX.chime(); if (isVoiced(ev)) Voice.say(evParts(ev)); } }
+  if (!keep) {
+    try {
+      o.querySelector('.modal').focus({ preventScroll: true });
+    } catch (e) {}
+  }
+  {
+    const ev = V.evCur;
+    if (V.res && V.res !== V.sfxRes) {
+      V.sfxRes = V.res;
+      SFX.forRes(V.res);
+      if (isVoiced(ev)) Voice.say(resParts(ev, V.res));
+    } else if (ev && !V.res && V.voiceEv !== ev) {
+      V.voiceEv = ev;
+      if (ev.kind === 'ball') SFX.chime();
+      if (isVoiced(ev)) Voice.say(evParts(ev));
+    }
+  }
 }
-const head = (title, tag) => `<div class="m-head"><div>${tag || ''}<h2>${esc(title)}</h2></div><button class="close" data-act="close" aria-label="Close">×</button></div>`;
+const head = (title, tag) =>
+  `<div class="m-head"><div>${tag || ''}<h2>${esc(title)}</h2></div>` +
+  `<button class="close" data-act="close" aria-label="Close">×</button></div>`;
 
 /* ---------- school minigames (memory pairs and quizzes inside academic events) ---------- */
 function newMg(ev) {
