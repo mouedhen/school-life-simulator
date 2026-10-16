@@ -17,14 +17,14 @@ Version publiée en Artifact privé : https://claude.ai/artifact/QnwPwuyEGtGECqn
 ## Architecture
 
 `build.py` concatène dans cet ordre, dans un unique `<script>`/`<style>` :
-`style.css` + `journal.css` → `data.js` → `talk.js` → `fr.js` → `i18n.js` → `engine.js` → `app.js`.
+`style.css` + `journal.css` → `data.js` → `talk.js` → `fr.js` → `i18n.js` → `src/engine/*.js` (dans l'ordre des noms, enveloppés dans une seule fonction) → `app.js`.
 Rien n'est importé : tout partage la portée globale du navigateur, l'ordre compte.
 
 - `data.js` : personnages (40), lieux, boutique, jobs, rumeurs, événements.
 - `talk.js` : dialogues.
-- `engine.js` : moteur pur (IIFE), sans DOM. RNG avec graine. DSL d'effets, ex. `fxs("p+2;r:T+6;f:FLAG")` (p = popularité, r:ROLE+n = relation, f:FLAG = drapeau). Fins de personnage décrites par `CHEND` et évaluées par `reqOk`. `checks(S)` / `BROAD` fixent la priorité : une fin de personnage n'apparaît en épilogue que si aucune fin générale ne se déclenche.
+- **Moteur** : `src/engine/01_core.js` … `14_api.js` (table des matières et règles dans `src/engine/README.md`). Ces fichiers ne sont pas des modules : ce sont des morceaux d'un même script qui partagent une portée, dans l'ordre des noms ; le code exécuté au chargement ne peut utiliser que les noms des fichiers précédents. `src/engine.js` n'est que le chargeur Node (tests, outils) : il assemble les morceaux comme `build.py`, avec une source map pour que les erreurs pointent vers le bon fichier. Dans la suite de ce document, « engine.js » désigne le moteur dans son ensemble. Moteur pur, sans DOM. RNG avec graine. DSL d'effets, ex. `fxs("p+2;r:T+6;f:FLAG")` (p = popularité, r:ROLE+n = relation, f:FLAG = drapeau). Fins de personnage décrites par `CHEND` et évaluées par `reqOk`. `checks(S)` / `BROAD` fixent la priorité : une fin de personnage n'apparaît en épilogue que si aucune fin générale ne se déclenche.
 - `app.js` : interface, journal, modales, réglages, son, voix, clavier.
-- `src/` ne contient que les 8 fichiers du build. Les scripts de développement sont dans `tools/` (voir `tools/README.md`) : `tools/sim/` (simulations Node du moteur, encore utilisables) et `tools/archive/` (anciens correctifs et brouillons, plus maintenus). Les scripts Node chargent le moteur avec `require('../../src/data.js'); require('../../src/talk.js'); const E=require('../../src/engine.js')` puis `E.newGame(seed)`.
+- `src/` ne contient que les fichiers du build (+ le chargeur Node `engine.js`). Les scripts de développement sont dans `tools/` (voir `tools/README.md`) : `tools/sim/` (simulations Node du moteur, encore utilisables) et `tools/archive/` (anciens correctifs et brouillons, plus maintenus). Les scripts Node chargent le moteur avec `require('../../src/data.js'); require('../../src/talk.js'); const E=require('../../src/engine.js')` puis `E.newGame(seed)`.
 
 ## Couche française
 
