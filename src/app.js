@@ -3364,40 +3364,153 @@ function applyTrait(S, id, p, ngp) {
 /* ---------- achievements & stats ---------- */
 const ACH = () => [
   ['first', L('First year', 'Première année'), L('Finish a run.', 'Terminer une partie.'), c => c.runs.length >= 1],
-  ['survivor', L('Survivor', 'Survivant'), L('Reach the end of the school year.', 'Arriver à la fin de l\'année scolaire.'), c => c.runs.some(r => !r.over)],
-  ['rock', L('Rock bottom', 'Le fond du trou'), L('Hit 0 popularity.', 'Tomber à 0 de popularité.'), c => c.runs.some(r => r.over)],
-  ['straight', L('Straight A', 'Premier de classe'), L('End a year with a grade of 90 or more.', 'Finir l\'année avec une note de 90 ou plus.'), c => c.runs.some(r => r.grade >= 90)],
-  ['popular', L('Everybody knows you', 'Tout le monde te connaît'), L('End a year with 90 popularity or more.', 'Finir l\'année avec 90 de popularité ou plus.'), c => c.runs.some(r => !r.over && r.pop >= 90)],
-  ['rich', L('Piggy bank', 'Tirelire'), L('End a year with $300 or more.', 'Finir l\'année avec 300 $ ou plus.'), c => c.runs.some(r => r.money >= 300)],
-  ['crew', L('A real crew', 'Une vraie bande'), L('End a year with 3 close friends.', 'Finir l\'année avec 3 amis proches.'), c => c.runs.some(r => (r.friends || []).length >= 3)],
-  ['both', L('Both sides', 'Les deux côtés'), L('See a good ending and a hard ending.', 'Voir une bonne fin et une fin difficile.'), c => c.good >= 1 && c.bad >= 1],
+  [
+    'survivor',
+    L('Survivor', 'Survivant'),
+    L('Reach the end of the school year.', "Arriver à la fin de l'année scolaire."),
+    c => c.runs.some(r => !r.over),
+  ],
+  [
+    'rock',
+    L('Rock bottom', 'Le fond du trou'),
+    L('Hit 0 popularity.', 'Tomber à 0 de popularité.'),
+    c => c.runs.some(r => r.over),
+  ],
+  [
+    'straight',
+    L('Straight A', 'Premier de classe'),
+    L('End a year with a grade of 90 or more.', "Finir l'année avec une note de 90 ou plus."),
+    c => c.runs.some(r => r.grade >= 90),
+  ],
+  [
+    'popular',
+    L('Everybody knows you', 'Tout le monde te connaît'),
+    L('End a year with 90 popularity or more.', "Finir l'année avec 90 de popularité ou plus."),
+    c => c.runs.some(r => !r.over && r.pop >= 90),
+  ],
+  [
+    'rich',
+    L('Piggy bank', 'Tirelire'),
+    L('End a year with $300 or more.', "Finir l'année avec 300 $ ou plus."),
+    c => c.runs.some(r => r.money >= 300),
+  ],
+  [
+    'crew',
+    L('A real crew', 'Une vraie bande'),
+    L('End a year with 3 close friends.', "Finir l'année avec 3 amis proches."),
+    c => c.runs.some(r => (r.friends || []).length >= 3),
+  ],
+  [
+    'both',
+    L('Both sides', 'Les deux côtés'),
+    L('See a good ending and a hard ending.', 'Voir une bonne fin et une fin difficile.'),
+    c => c.good >= 1 && c.bad >= 1,
+  ],
   ['c10', L('Ten endings', 'Dix fins'), L('Unlock 10 endings.', 'Débloquer 10 fins.'), c => c.seen >= 10],
-  ['c25', L('Twenty-five endings', 'Vingt-cinq fins'), L('Unlock 25 endings.', 'Débloquer 25 fins.'), c => c.seen >= 25],
+  [
+    'c25',
+    L('Twenty-five endings', 'Vingt-cinq fins'),
+    L('Unlock 25 endings.', 'Débloquer 25 fins.'),
+    c => c.seen >= 25,
+  ],
   ['c50', L('Fifty endings', 'Cinquante fins'), L('Unlock 50 endings.', 'Débloquer 50 fins.'), c => c.seen >= 50],
-  ['all', L('Completionist', 'Complétiste'), L('Unlock every ending.', 'Débloquer toutes les fins.'), c => c.seen >= E.ENDINGS.length],
-  ['knife', L('A good knife', 'Un bon couteau'), L('Receive Mom\'s cooking knife.', 'Recevoir le couteau de cuisine de Maman.'), c => c.runs.some(r => r.knife)],
-  ['chef', L('Little chef', 'Petit chef'), L('Cook the signature dish.', 'Cuisiner le plat signature.'), c => c.runs.some(r => r.sig)],
-  ['ink', L('Faint ink', 'Encre pâle'), L('Keep your eyes open.', 'Garde l\'œil ouvert.'), c => c.clues >= 1],
+  [
+    'all',
+    L('Completionist', 'Complétiste'),
+    L('Unlock every ending.', 'Débloquer toutes les fins.'),
+    c => c.seen >= E.ENDINGS.length,
+  ],
+  [
+    'knife',
+    L('A good knife', 'Un bon couteau'),
+    L("Receive Mom's cooking knife.", 'Recevoir le couteau de cuisine de Maman.'),
+    c => c.runs.some(r => r.knife),
+  ],
+  [
+    'chef',
+    L('Little chef', 'Petit chef'),
+    L('Cook the signature dish.', 'Cuisiner le plat signature.'),
+    c => c.runs.some(r => r.sig),
+  ],
+  ['ink', L('Faint ink', 'Encre pâle'), L('Keep your eyes open.', "Garde l'œil ouvert."), c => c.clues >= 1],
   ['pen', L('Who holds the pen?', 'Qui tient le stylo ?'), '???', c => c.clues >= E.REVEAL_AT],
-  ['again', L('Just one more year', 'Encore une année'), L('Finish 5 runs.', 'Terminer 5 parties.'), c => c.runs.length >= 5],
+  [
+    'again',
+    L('Just one more year', 'Encore une année'),
+    L('Finish 5 runs.', 'Terminer 5 parties.'),
+    c => c.runs.length >= 5,
+  ],
 ];
 function achCtx(p) {
-  const seen = new Set((p.seen || []).concat(V.seen || [])); const list = E.ENDINGS.filter(e => seen.has(e.id));
-  return { clues: clueN(), runs: p.runs || [], seen: list.length, good: list.filter(e => !e.bad).length, bad: list.filter(e => e.bad).length };
+  const seen = new Set((p.seen || []).concat(V.seen || []));
+  const list = E.ENDINGS.filter(e => seen.has(e.id));
+  return {
+    clues: clueN(),
+    runs: p.runs || [],
+    seen: list.length,
+    good: list.filter(e => !e.bad).length,
+    bad: list.filter(e => e.bad).length,
+  };
 }
 async function showStats() {
-  const p = await Store.prefs(); const c = achCtx(p); const runs = c.runs; const mx = k => runs.length ? Math.max(...runs.map(r => r[k] || 0)) : 0;
+  const p = await Store.prefs();
+  const c = achCtx(p);
+  const runs = c.runs;
+  const mx = k => (runs.length ? Math.max(...runs.map(r => r[k] || 0)) : 0);
   const done = ACH().filter(a => a[3](c)).length;
   let cur = '';
   if (S && !S.over) {
     const tn = (TRAITS().find(x => x[0] === S.trait) || [])[1];
-    cur = `<h3 style="margin:14px 0 6px">${L('This run', 'Cette partie')}</h3><div class="stats3"><div><b>${S.di + 1}/${DAYS.length}</b>${t('Day')}</div><div><b>${S.studies || 0}</b>${L('Study sessions', 'Séances d\'étude')}</div><div><b>${S.jobsDone || 0}</b>${L('Shifts worked', 'Quarts travaillés')}</div></div><p class="small muted" style="margin:6px 0 0">${L('Earned', 'Gagné')} $${S.earned || 0} · ${L('Spent', 'Dépensé')} $${S.spent || 0} · ${L('Gifts', 'Cadeaux')} ${S.giftN || 0}${tn ? ' · ' + L('Start', 'Départ') + ': ' + esc(tn) : ''}</p>`;
+    cur =
+      `<h3 style="margin:14px 0 6px">${L('This run', 'Cette partie')}</h3><div class="stats3"><div>` +
+      `<b>${S.di + 1}/${DAYS.length}</b>${t('Day')}</div><div><b>${S.studies || 0}` +
+      `</b>${L('Study sessions', "Séances d'étude")}</div><div><b>${S.jobsDone || 0}` +
+      `</b>${L('Shifts worked', 'Quarts travaillés')}</div></div>` +
+      `<p class="small muted" style="margin:6px 0 0">${L('Earned', 'Gagné')} $${S.earned || 0} · ${L('Spent', 'Dépensé')} $` +
+      `${S.spent || 0} · ${L('Gifts', 'Cadeaux')} ${S.giftN || 0}${tn ? ' · ' + L('Start', 'Départ') + ': ' + esc(tn) : ''}` +
+      `</p>`;
   }
-  const best = runs.length ? `<div class="stats3"><div><b>${runs.length}</b>${L('Runs finished', 'Parties finies')}</div><div><b>${mx('grade')}</b>${L('Best grade', 'Meilleure note')}</div><div><b>${mx('pop')}</b>${L('Best POP', 'Meilleure POP')}</div></div><p class="small muted" style="margin:6px 0 0">${L('Most money', 'Plus d\'argent')}: $${mx('money')}</p>` : `<p class="muted small">${L('Finish a run to see your records here.', 'Termine une partie pour voir tes records ici.')}</p>`;
-  const fr_ = {}; runs.forEach(r => (r.friends || []).forEach(n => { fr_[n] = (fr_[n] || 0) + 1; })); const top = Object.entries(fr_).sort((a, b) => b[1] - a[1]).slice(0, 3);
-  const frh = top.length ? `<p class="small muted" style="margin:6px 0 0">${L('Most loyal friends', 'Amis les plus fidèles')}: ${top.map(x => esc(x[0]) + ' ×' + x[1]).join(', ')}</p>` : '';
-  const ach = inkStatHtml(p) + ACH().map(a => { const ok = a[3](c); return `<div class="endrow"><span class="dot ${ok ? 'on' : ''}"></span><div><b>${ok ? esc(a[1]) : '???'}</b><div class="small muted">${esc(a[2])}</div></div></div>`; }).join('');
-  openModal(head(L('Stats', 'Statistiques'), '') + `<h3 style="margin:0 0 6px">${L('Records', 'Records')}</h3>${best}${frh}<p class="small muted" style="margin:6px 0 0">${L('Endings', 'Fins')}: ${c.seen}/${E.ENDINGS.length} (${c.good} ${L('good', 'bonnes')}, ${c.bad} ${L('hard', 'difficiles')})</p>${cur}<h3 style="margin:14px 0 4px">${L('Achievements', 'Succès')} · ${done}/${ACH().length}</h3>${ach}`);
+  const best = runs.length
+    ? `<div class="stats3"><div><b>${runs.length}</b>${L('Runs finished', 'Parties finies')}</div><div>` +
+      `<b>${mx('grade')}</b>${L('Best grade', 'Meilleure note')}</div><div><b>${mx('pop')}` +
+      `</b>${L('Best POP', 'Meilleure POP')}</div></div>` +
+      `<p class="small muted" style="margin:6px 0 0">${L('Most money', "Plus d'argent")}: $${mx('money')}` +
+      `</p>`
+    : `<p class="muted small">` +
+      L('Finish a run to see your records here.', 'Termine une partie pour voir tes records ici.') +
+      `</p>`;
+  const fr_ = {};
+  runs.forEach(r =>
+    (r.friends || []).forEach(n => {
+      fr_[n] = (fr_[n] || 0) + 1;
+    }),
+  );
+  const top = Object.entries(fr_)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+  const frh = top.length
+    ? `<p class="small muted" style="margin:6px 0 0">${L('Most loyal friends', 'Amis les plus fidèles')}: ` +
+      top.map(x => esc(x[0]) + ' ×' + x[1]).join(', ') +
+      `</p>`
+    : '';
+  const ach =
+    inkStatHtml(p) +
+    ACH()
+      .map(a => {
+        const ok = a[3](c);
+        return (
+          `<div class="endrow"><span class="dot ${ok ? 'on' : ''}"></span><div><b>${ok ? esc(a[1]) : '???'}</b>` +
+          `<div class="small muted">${esc(a[2])}</div></div></div>`
+        );
+      })
+      .join('');
+  openModal(
+    head(L('Stats', 'Statistiques'), '') +
+      (`<h3 style="margin:0 0 6px">${L('Records', 'Records')}</h3>${best}${frh}` +
+        `<p class="small muted" style="margin:6px 0 0">${L('Endings', 'Fins')}: ${c.seen}/${E.ENDINGS.length} (${c.good} ` +
+        `${L('good', 'bonnes')}, ${c.bad} ${L('hard', 'difficiles')})</p>${cur}` +
+        `<h3 style="margin:14px 0 4px">${L('Achievements', 'Succès')} · ${done}/${ACH().length}</h3>${ach}`),
+  );
 }
 
 /* ---------- person profile ---------- */
