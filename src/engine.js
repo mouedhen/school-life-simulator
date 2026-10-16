@@ -1,6 +1,56 @@
-/* School Life Simulator engine — pure logic, no DOM. Needs globalThis.DATA. */
+/* School Life Simulator engine — pure logic, no DOM. Needs globalThis.DATA (data.js) and,
+ * optionally, globalThis.TALK (talk.js). Everything is exposed through the object `E`
+ * at the end of the file (globalThis.Engine in the browser, module.exports in Node).
+ *
+ * TABLE OF CONTENTS (sections in file order)
+ *   core lookups ........... characters by name, KIDS / FAM / TEACH lists
+ *   rng .................... seeded random numbers (mulberry32); rnd(S) advances S.rs
+ *   effect DSL ............. fxs("p+2;r:T+3?.5;f:FLAG") -> list of effect objects
+ *   calendar ............... DAYS (school days from data.js + a virtual spring-break day)
+ *   random events .......... RAND: the 20 small evening events
+ *   special events ......... SPECIAL: fixed-date "big" school events (+ showcase, reveal)
+ *   holidays ............... HOLIDAYS: long weekends and family gift scenes
+ *   shop ................... SHOP items, their kind (gift / prep / use / perm / cosmetic / booster)
+ *   jobs ................... JOBS: paid after-school work
+ *   interaction catalogue .. INTER: everything you can do with a person, and who allows it
+ *   links / ripple ......... LINKS: friendships between characters (relationship ripple)
+ *   state .................. newGame(): the shape of the game state S; flags
+ *   meeting people ......... the circle of known classmates grows through events
+ *   start of a day ......... time blocks, which event opens the day (preDayEvent)
+ *   the Player mystery ..... MC's doubts (THOUGHTS) and the family noticing (NOTICE)
+ *   NPC acts ............... people come to you: compliments, gifts, gossip, follow-ups
+ *   relationships .......... addRel() with diminishing returns and ripple to linked kids
+ *   day context ............ who plays Target / Helper / Classmate... in an event (makeCtx)
+ *   applying effects ....... applyFx(), pop / grade / money changes, game over by POP
+ *   building events ........ buildEvent(): turns S.pend into an event for the UI
+ *   personal events ........ one-on-one evening scenes (friendly / tense / enemy)
+ *   choosing ............... choose(): resolves a choice (study check, cheating, team game)
+ *   ball invitation ........ chooseBall(): asking someone to the Ball
+ *   the Ball ............... the five-scene Ball night
+ *   after an event ......... finishEvent(): what comes next
+ *   day flow ............... endDay(), evening events, advance(), end of the year
+ *   free-time actions ...... study, work, buy
+ *   family bonds ........... BONDS: activities with Dad / siblings, gift items at 100
+ *   cooking ................ RECIPES, cook()
+ *   items and gifts ........ useItem(), giveGift()
+ *   interactions ........... interactionList(), interact(), rumours
+ *   endings ................ ENDINGS, stats(), character endings (CHEND), checks(), evaluateEnding()
+ *   quiz mini-games ........ quiz(): questions for exam / test / quiz days
+ *   phone .................. texting a person (replaces in-person small talk), incoming texts
+ *   group chats ............ #class and #fam
+ *   phone minigames ........ rewards for the phone games
+ *   rumour lookup .......... rumorsFor() for the UI
+ *   public API ............. the object E
+ *
+ * RULES FOR CHANGING THIS FILE
+ *   - English strings are translation keys for the French layer (tr/out_*.json, one key per
+ *     sentence). Changing a sentence means adding its French translation too.
+ *   - Every random draw goes through rnd(S) (or a local mul() generator seeded from S.seed),
+ *     so a game is reproducible from its seed. tests/golden.js checks this.
+ */
 (function (root) {
 'use strict';
+/* ---------- core lookups ---------- */
 const D = root.DATA;
 const CH = {}; D.chars.forEach(c => CH[c.n] = c);
 const KIDS = D.chars.filter(c => c.role === 'kid').map(c => c.n);
@@ -18,7 +68,22 @@ const pick = (S, arr) => arr[Math.floor(rnd(S) * arr.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function shuffle(arr, r) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
-/* ---------- DSL for hand-written effects: "p+2;r:C+3?.5;m-5;g+1;f:FLAG;gos+1" ---------- */
+/* ---------- effect DSL ---------- */
+// Example: "p+2;r:C+3?.5;m-5;g+1;f:FLAG;gos+1"
+// A string of tokens separated by ';'. Each token becomes one effect object:
+//   p+N / p-N        popularity            -> { t: 'pop', v }
+//   g+N / g-N        grade                 -> { t: 'grade', v }   (gains are scaled x0.6 in applyFx)
+//   m+N / m-N        money                 -> { t: 'money', v }
+//   r:ROLE+N         relationship          -> { t: 'rel', who: ROLE, v }
+//                    ROLE is a role key (T, H, C, TM, TM1, G, TEACH, DATE, TOP, RIVAL, MAYA,
+//                    MOM, DAD, PARENTS, RILEY, MAX, OLIVER, SOPHIE) or a character's full name;
+//                    see roleKey() / resolve() in "day context".
+//   f:FLAG           set a flag (S.flags[FLAG] += 1) -> { t: 'flag', f }
+//   gos+N            gossip counter        -> { t: 'gossip', v }
+// Any token can end with ?P (0..1): it only happens with probability P, e.g. "p-8?.4".
+// 'gos' is tested before 'g' on purpose: "gos+1" must not be read as a grade change.
+// Effects built by data.js can also have t: 'spill' / 'either' and g: 'ex' (see applyFx).
+// An unknown token throws an error.
 function fxs(str) {
   if (!str) return [];
   return str.split(';').map(s => s.trim()).filter(Boolean).map(tok => {
@@ -46,7 +111,9 @@ const DAYS = D.days.slice();
 const DAYIDX = {}; DAYS.forEach((d, i) => DAYIDX[d.d] = i);
 const BALL_DAY = '2027-06-18';
 
-/* ---------- hand-written data ---------- */
+/* ---------- random events ---------- */
+// RAND: the small evening events. Effects are hand-written here; titles, descriptions and
+// choice texts come from data.js (D.events, same order).
 const RAND = [
   ['Rainy-Day Plan', [['r:C+2', ''], ['', ''], ['p+1', '']]],
   ['Lost Wallet', [['p+3;f:RETURNED_WALLET', ''], ['p+4;f:RETURNED_WALLET', ''], ['m+10;p-8?.4;f:KEPT_CASH', '']]],
@@ -76,6 +143,10 @@ const RAND = [
     return Object.assign(base, { fx: [], sp: ch.sp, pass: fxs(ch.pass), fail: fxs(ch.fail), ok: fxs(ch.ok) });
   }) };
 });
+/* ---------- special events ---------- */
+// Fixed-date school events. Each choice row: [text, effects, requiredFlag, requirement, say].
+//   requiredFlag: the choice is hidden unless that flag is set; requirement: 'FRIEND' (Target
+//   at +20) or 'M4' ($4); say: a line shown after choosing. date 'meta' = no fixed date.
 const SPECIAL = {
   screenshot: { date: '2026-10-05', t: 'The Screenshot That Changes Everything', d: 'A cropped screenshot from a private conversation circulates. It is real, but the missing context changes how it reads. Students decide whom to believe partly based on status.', c: [
     ['Investigate the rumour', 'r:T+2;f:INVESTIGATED_RUMOUR;f:PEDAGO_HELPED'],
@@ -136,7 +207,10 @@ SPECIAL.reveal = { date: 'meta', t: 'The Page Gets Thin', d: 'The journal falls 
     ['Keep playing as if nothing changed', 'f:REVEAL_DONE', null, null, 'The ink fades. Both of you pretend, for a little while, that nothing was said.']] };
 const SPECIAL_BY_DATE = {}; Object.keys(SPECIAL).forEach(k => SPECIAL_BY_DATE[SPECIAL[k].date] = k);
 
-/* ---------- holidays / congé: shown on the first school day after a gap ---------- */
+/* ---------- holidays ---------- */
+// Shown on the first school day after a break (looked up by `ret`, the return date).
+// The gift_* scenes (and knife) have no date: preDayEvent() triggers them when a family
+// relationship reaches 100 (see GIFTS in "family bonds").
 const HOLIDAYS = {
   labour: { date: '2026-09-07', ret: '2026-09-08', t: 'Labour Day Long Weekend', d: 'No school on Monday. After a first week of new faces and new rules, the long weekend feels like a deep breath.', c: [
     ['Spend the long weekend with your family', 'r:PARENTS+3;f:HOLIDAY_FAMILY'],
@@ -195,6 +269,7 @@ const HOLIDAYS = {
 };
 const HOL_BY_RET = {}; Object.keys(HOLIDAYS).forEach(k => HOL_BY_RET[HOLIDAYS[k].ret] = k);
 
+/* ---------- shop ---------- */
 const SHOP = D.shop.map((s, i) => ({ id: i, n: s.name, price: s.price, note: s.effect }));
 const SHOPKIND = { // kind: gift | prep | use | perm | cosmetic
   'Notebook & pen set': ['prep', 'Auto-used on your next study check: +10% to pass.'],
@@ -259,6 +334,7 @@ SHOP.forEach(s => { const k = SHOPKIND[s.n] || ['gift', '']; s.kind = k[0]; s.us
 const itemLocked = (S, it) => !!it.flag && !F(S, it.flag);
 const SHOPBYNAME = {}; SHOP.forEach(s => SHOPBYNAME[s.n] = s);
 
+/* ---------- jobs ---------- */
 const JOBS = [
   { n: "Water a neighbor's plants", pay: 6, blocks: 1, fx: 'p+0', gain: 'Kindness' },
   { n: 'Pet-sit for a familiar neighbor', pay: 10, blocks: 1 },
@@ -274,7 +350,9 @@ const JOBS = [
   { n: 'Sell handmade crafts', pay: 14, blocks: 2, need: 'Craft kit' },
 ].map((j, i) => { const src = D.jobs[i]; j.note = src ? src.note : ''; j.id = i; return j; });
 
-/* ---------- interactions ---------- */
+/* ---------- interaction catalogue ---------- */
+// cost = time blocks; daily = max uses per person per day; who / gate are descriptive only:
+// the real checks are in interactionList().
 const INTER = [
   { id: 'talk', n: 'Talk / ask about a topic', cost: 1, who: 'all' },
   { id: 'compliment', n: 'Give a compliment', cost: 0, who: 'all', daily: 1 },
@@ -315,6 +393,47 @@ const FAMILY_NO = new Set(['start', 'fight', 'prank', 'study', 'group', 'debate'
 const LINKS = {}; D.links.forEach(([a, b, k]) => { (LINKS[a] = LINKS[a] || []).push([b, k]); (LINKS[b] = LINKS[b] || []).push([a, k]); });
 
 /* ---------- state ---------- */
+// The whole game is one plain object S (saved as JSON by the UI). Field names are short and
+// must not be renamed: saves depend on them. Key insertion order matters for tests/golden.js.
+//
+// Set by newGame():
+//   v, ngp            save version; 1 when this is a New Game+ run
+//   seed, rs          the seed and the current RNG state (advanced by rnd)
+//   di                index of the current day in DAYS
+//   phase             'event' (an event waits in S.pend) | 'free' (after-school actions)
+//                     | 'over' (game over) | 'ending' (year finished, S.ending is set)
+//   pend              the pending event: { kind: 'day' | 'special' | 'holiday' | 'rand' | 'ballinvite'
+//                     | 'ball' | 'personal' | 'npc' | 'notice' | 'birthday', ...details }
+//   pop, money, grade popularity 0-100, dollars, grade 0-100; startGrade = grade on day 1
+//   rel[name]         relationship -100..100 with every character; min[name] = lowest ever
+//   flags[FLAG]       how many times a story flag was set (read with F(S, FLAG))
+//   gossip, started   rumours spread / rumours started; caught = times caught (cheating...)
+//   prep              bonus % for the next study check (spent by the check)
+//   apol[name]        apologies made; hurt[name] = times you hurt them; ih[name][id] = interaction counts
+//   inv[item]         items in the bag (count); perm[item] = owned permanent items; worn[item] = cosmetics worn
+//   loans             [{ who, amt, due }] money lent, paid back on day `due` (85% chance)
+//   last[name]        day of the last contact (relationships above 10 decay after 14 days without)
+//   today             per-day counters, emptied by advance()
+//   cool[name]        day of the last personal event with that person
+//   heard[name]       indexes of their rumours you have heard
+//   blocks, maxBlocks time blocks left / available today; bike = days left of the bicycle bonus
+//   freeActs, studies, jobsDone, earned, spent, giftN, giftTo, apolN, accepted, refused, vague,
+//   investN, corrected, boundaryN, nrand: counters read by the endings
+//   log               the diary entries [{ d, k, t, c }] (last 400)
+//   over, ending      game-over reason ('pop') / the ending object from evaluateEnding()
+//   lastRand          day of the last random event; asks[name] = times you asked them for money
+//   ballTry           Ball invitations made; rcool, seenEnd: unused by the engine
+//   met[name]         people you know; order = classmates still to meet; nextIntro = earliest intro day
+// Added later, when first needed (old saves may lack them):
+//   metN, introDay, introWho        meeting people
+//   cool2, lastNpc, follow          NPC acts (per-person cooldown, last NPC day, pending follow-ups)
+//   secretDone, recon, retal, talked, giftFrom, lentN, bondDay, bondN, cookDay, cookN
+//   tribT, tribNext                 the two-day Group Chat Tribunal
+//   ballDate, ballDone, cardUsed, luck, lowStreak, lowMax, notice (one-off message for the UI)
+//   strange, noticed, th            the Player mystery (clue count this run, family notices, MC thoughts)
+//   meta                            set by the UI: { clues } found across all runs
+//   phone, phoneN, phoneAsk, gcN, gcDef, gcLaugh, phIgn, pgN, pgPerf, pgLast, pgPop   phone
+//   _ph                             1 while a phone text runs interact() (never saved as 1)
 function newGame(seed, ngp) {
   seed = seed == null ? (Math.random() * 2 ** 31) | 0 : seed;
   const S = {
@@ -338,7 +457,8 @@ function newGame(seed, ngp) {
 }
 const F = (S, n) => S.flags[n] || 0;
 const setFlag = (S, n) => { S.flags[n] = (S.flags[n] || 0) + 1; };
-/* ---------- meeting people: the circle grows through events (old saves without S.met know everyone) ---------- */
+/* ---------- meeting people ---------- */
+// The circle of known classmates grows through events. Old saves without S.met know everyone.
 const START_KIDS = 8, INTRO_GAP = 3;
 const isMet = (S, n) => !S.met || !!S.met[n];
 const metOf = (S, arr) => S.met ? arr.filter(n => S.met[n]) : arr;
@@ -350,6 +470,7 @@ function introCheck(S, d) { // decides, once per day, whether this day's event i
   if (!d.c.some(c => allFx(c).some(f => f.t === 'rel' && roleKey(f.who) === 'T'))) return; // the day must involve the target kid
   S.introDay = S.di; S.introWho = nxt; S.nextIntro = S.di + INTRO_GAP + (hash(S.seed + 'ni' + S.di) % 3);
 }
+/* ---------- start of a day ---------- */
 const dayOf = S => DAYS[Math.min(S.di, DAYS.length - 1)];
 function blocksFor(S) {
   let b = 3;
@@ -371,7 +492,8 @@ function preDayEvent(S) {
   return { kind: 'day' };
 }
 
-/* ---------- the Player mystery: doubts, family noticing ---------- */
+/* ---------- the Player mystery ---------- */
+// MC doubts that they are in control (THOUGHTS) and the family notices (NOTICE).
 const REVEAL_AT = 9;
 const mystStage = S => { const n = (S.meta && S.meta.clues) || 0; return n >= 6 ? 2 : n >= 3 ? 1 : 0; };
 const THOUGHTS = [
@@ -408,7 +530,8 @@ function noticeEvent(S, p, ctx) {
   return { kind: 'notice', title: f + ' notices something', desc: n.d(f), ctx, who: [{ role: 'With', names: [ch] }], choices: n.c.map((c, i) => ({ l: 'ABCDEF'[i], x: c[0], fx: fxs(c[1]), say: c[2](f) })) };
 }
 
-/* ---------- NPC-initiated acts: they compliment you, give gifts, invite you, talk about you ---------- */
+/* ---------- NPC acts ---------- */
+// People come to you in the evening: compliments, gifts, invitations, gossip, follow-ups.
 const NPC_ITEMS = ['Snack', 'Sticker pack', 'Phone charm', 'Café drink', 'Used paperback'];
 function npcActs(S, n) {
   const v = S.rel[n], c = CH[n], out = [];
@@ -777,6 +900,7 @@ function choose(S, idx, extra) {
   return res;
 }
 const stripEnd = s => String(s || '').replace(/[.\s]+$/, '');
+/* ---------- ball invitation ---------- */
 function chooseBall(S, c, ev) {
   const ch = []; const lines = [];
   S.ballTry++;
@@ -793,7 +917,8 @@ function chooseBall(S, c, ev) {
   S.ballDone = 0;
   return result(ch, lines);
 }
-/* ---------- the Ball: multi-scene night ---------- */
+/* ---------- the Ball ---------- */
+// A five-scene night (outfit, dance floor, rumour, photos, last dance) on BALL_DAY.
 const BALL_STAGES = 5;
 function ballFoe(S) { const lo = metKids(S).slice().sort((a, b) => S.rel[a] - S.rel[b])[0]; return S.rel[lo] < -10 ? lo : null; }
 function ballFriend(S) { return S.ballDate || knownRank(S, metKids(S))[0]; }
@@ -882,6 +1007,7 @@ function chooseBallScene(S, c, ev) {
   else { S.pend = { kind: 'ball', st: ev.st + 1 }; S.phase = 'event'; }
   return result(ch, lines);
 }
+/* ---------- after an event ---------- */
 function finishEvent(S, ev) {
   if (S.over) { S.pend = null; return; }
   const k = ev.kind;
@@ -1012,6 +1138,7 @@ function buy(S, id) {
   logAdd(S, 'Bought ' + it.n, ch, 'sys');
   return result(ch, []);
 }
+/* ---------- family bonds ---------- */
 const GIFTS = [['knife', 'Mom', 'Cooking knife'], ['gift_dad', 'Dad', 'Dad\'s toolbox'], ['gift_riley', 'Riley', 'Riley\'s hidden card'], ['gift_max', 'Max', 'Max\'s lucky controller'], ['gift_oliver', 'Oliver', 'Oliver\'s varsity jacket'], ['gift_sophie', 'Sophie', 'Sophie\'s planner']];
 const BONDS = {
   Dad: { item: 'Dad\'s toolbox', acts: [
@@ -1066,6 +1193,7 @@ function bond(S, who, aid) {
   if (B.acts.filter(x => bondOk(S, who, x)).length > before) lines.push('A new activity with ' + who + ' is now unlocked.');
   return result(ch, lines);
 }
+/* ---------- cooking ---------- */
 const RECIPES = [
   { id: 'eggs', n: 'Scrambled eggs', cost: 3, mom: 0, q: 1 },
   { id: 'pasta', n: 'Tomato pasta', cost: 6, mom: 25, q: 2 },
@@ -1099,6 +1227,7 @@ function cook(S, rid, who) {
   if (S.cookN % 3 === 0 && cookLevel(S) <= 5) lines.push('Your cooking is getting better.');
   return result(ch, lines);
 }
+/* ---------- items and gifts ---------- */
 function giftItems(S) {
   const out = [];
   SHOP.forEach(it => { if (!['gift', 'cosmetic', 'use'].includes(it.kind)) return; if (['Mystery box', 'Bicycle tune-up', 'Craft kit', 'Tutoring session', 'Lucky charm', 'Friendship bracelet kit'].includes(it.n)) return; if ((S.inv[it.n] || 0) > 0) out.push(it); });
@@ -1142,7 +1271,7 @@ function giveGift(S, name, item, ev, fromEvent) {
   return result(ch, lines);
 }
 
-/* interactions */
+/* ---------- interactions ---------- */
 function interactionList(S, name) {
   const c = CH[name]; const v = S.rel[name];
   const out = [];
@@ -1578,7 +1707,7 @@ function evaluateEnding(S) {
   return { id: primary, epi, all: hit.concat(chars), chars };
 }
 
-/* ---------- mini-games ---------- */
+/* ---------- quiz mini-games ---------- */
 const QB = {
   english: [['Which word is a synonym of "happy"?', 'joyful', ['gloomy', 'angry', 'sleepy']], ['Pick the correct spelling.', 'receive', ['recieve', 'receeve', 'riceive']], ['Which sentence is correct?', 'They are going to their house.', ['Their going to there house.', 'They\'re going to there house.', 'Their going too they\'re house.']], ['What is the opposite of "ancient"?', 'modern', ['old', 'dusty', 'distant']], ['Which is a noun?', 'bridge', ['quickly', 'jump', 'bright']], ['A word that describes a verb is a...', 'adverb', ['noun', 'pronoun', 'article']], ['Pick the plural of "mouse".', 'mice', ['mouses', 'mices', 'mouse']], ['Which has correct punctuation?', 'Wait, I forgot my book!', ['Wait I forgot, my book!', 'Wait I forgot my book', 'Wait, I forgot my book,']], ['"Her smile was as bright as the sun" is a...', 'simile', ['metaphor', 'rhyme', 'riddle']], ['The main character of a story is the...', 'protagonist', ['setting', 'theme', 'narrator']], ['Which word means "very tired"?', 'exhausted', ['energetic', 'curious', 'generous']], ['Choose the past tense of "run".', 'ran', ['runned', 'running', 'runs']]],
   science: [['Which planet is closest to the Sun?', 'Mercury', ['Venus', 'Mars', 'Earth']], ['Water freezes at...', '0 °C', ['10 °C', '100 °C', '-10 °C']], ['Plants take in which gas?', 'carbon dioxide', ['helium', 'nitrogen', 'methane']], ['Which is a solid at room temperature?', 'rock', ['milk', 'steam', 'air']], ['What do bees help plants do?', 'pollinate', ['freeze', 'evaporate', 'erode']], ['Which organ pumps blood?', 'heart', ['lungs', 'stomach', 'brain']], ['The force pulling things to Earth is...', 'gravity', ['friction', 'magnetism', 'sound']], ['A baby frog is called a...', 'tadpole', ['cub', 'pup', 'larva fish']], ['Which is a renewable energy source?', 'wind', ['coal', 'oil', 'gas']], ['What do we call animals that eat only plants?', 'herbivores', ['carnivores', 'omnivores', 'predators']], ['Sound travels fastest through...', 'solids', ['gases', 'a vacuum', 'empty space']], ['What is the center of an atom called?', 'nucleus', ['orbit', 'cell', 'shell']]],
@@ -1610,7 +1739,8 @@ function quiz(S, title) {
 }
 
 
-/* ---------- the phone: texting replaces most small talk ---------- */
+/* ---------- phone ---------- */
+// Texting replaces most in-person small talk (PHONE_HIDE). A text runs interact() with S._ph = 1.
 const PHONE_CAP = 4;
 const PHONE_ACTS = [
   ['chat_school', 'talk', 'school', 'Chat about school'], ['chat_hobbies', 'talk', 'hobbies', 'Chat about hobbies'], ['chat_daily', 'talk', 'daily', 'Chat about daily life'], ['chat_rumor', 'talk', 'rumor', 'Ask what they have heard'],
@@ -1793,9 +1923,10 @@ function phoneGame(S, id, score, max) {
   return { score, max, paid, chips: ch, lines };
 }
 
-/* ---------- rumor lookup for UI ---------- */
+/* ---------- rumour lookup ---------- */
 function rumorsFor(S, name) { return CH[name].rum.map((r, i) => ({ i, t: r[1], k: r[0], known: (S.heard[name] || []).includes(i) })); }
 
+/* ---------- public API ---------- */
 const E = { isMet, metKids, metOf, itemLocked, phoneCan, applyFx, fxs, D, CH, KIDS, FAM, TEACH, DAYS, DAYIDX, SHOP, JOBS, INTER, ENDINGS, ENDBY, RAND, SPECIAL, HOLIDAYS, BALL_DAY,
   newGame, buildEvent, choose, endDay, study, work, buy, useItem, giveGift, giftItems, interactionList, interact, phoneList, phoneAct, phoneReply, phoneOf, PHONE_HIDE, PHONE_CAP, PH_MC, phoneOff, GROUPS, GC_ACTS, GC_SAY, GC_NICE, GC_FAM, phoneGroupList, phoneGroupAct, phoneGame, PG_GAP, relLabel, rumorsFor,
   BONDS, bond, bondOk, GIFTS, RECIPES, cook, cookLevel, cookPrice, recipeOk, THOUGHTS, noteStrange, mystStage, REVEAL_AT, npcActs, dayOf, ballScene, acadChance, quiz, hintsFor, checks, evaluateEnding, stats, hash, mul, F, ballChance, advance, rnd, fxs, likeScore };
