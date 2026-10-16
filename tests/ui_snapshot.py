@@ -1,7 +1,7 @@
-"""UI snapshot guard for refactors of src/app.js (browser, Playwright).
+"""UI snapshot guard for refactors of the UI (src/app/*.js) (browser, Playwright).
 Plays a fixed, seeded path in EN and FR, visits every tab and the main modals, and stores the HTML of
 #root and #ov for each screen. Math.random is replaced by a seeded generator and web fonts are blocked,
-so two runs of the same app.js give the same HTML.
+so two runs of the same build give the same HTML.
 Usage:  python tests/ui_snapshot.py record   -> writes tests/ui_snapshot.json
         python tests/ui_snapshot.py          -> compares with tests/ui_snapshot.json, prints the first difference"""
 import sys, json, pathlib, difflib

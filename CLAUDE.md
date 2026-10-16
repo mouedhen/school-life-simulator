@@ -17,13 +17,13 @@ Version publiée en Artifact privé : https://claude.ai/artifact/QnwPwuyEGtGECqn
 ## Architecture
 
 `build.py` concatène dans cet ordre, dans un unique `<script>`/`<style>` :
-`style.css` + `journal.css` → `data.js` → `talk.js` → `fr.js` → `i18n.js` → `src/engine/*.js` (dans l'ordre des noms, enveloppés dans une seule fonction) → `app.js`.
+`style.css` + `journal.css` → `data.js` → `talk.js` → `fr.js` → `i18n.js` → `src/engine/*.js` (dans l'ordre des noms, enveloppés dans une seule fonction) → `src/app/*.js` (idem).
 Rien n'est importé : tout partage la portée globale du navigateur, l'ordre compte.
 
 - `data.js` : personnages (40), lieux, boutique, jobs, rumeurs, événements.
 - `talk.js` : dialogues.
 - **Moteur** : `src/engine/01_core.js` … `14_api.js` (table des matières et règles dans `src/engine/README.md`). Ces fichiers ne sont pas des modules : ce sont des morceaux d'un même script qui partagent une portée, dans l'ordre des noms ; le code exécuté au chargement ne peut utiliser que les noms des fichiers précédents. `src/engine.js` n'est que le chargeur Node (tests, outils) : il assemble les morceaux comme `build.py`, avec une source map pour que les erreurs pointent vers le bon fichier. Dans la suite de ce document, « engine.js » désigne le moteur dans son ensemble. Moteur pur, sans DOM. RNG avec graine. DSL d'effets, ex. `fxs("p+2;r:T+6;f:FLAG")` (p = popularité, r:ROLE+n = relation, f:FLAG = drapeau). Fins de personnage décrites par `CHEND` et évaluées par `reqOk`. `checks(S)` / `BROAD` fixent la priorité : une fin de personnage n'apparaît en épilogue que si aucune fin générale ne se déclenche.
-- `app.js` : interface, journal, modales, réglages, son, voix, clavier.
+- **Interface** : `src/app/01_base.js` … `13_boot.js` (table des matières, état `S`/`V`, fonctionnement des clics dans `src/app/README.md`) : interface, journal, modales, réglages, son, voix, clavier. Mêmes règles que le moteur (morceaux d'un même script, ordre des noms). Dans la suite, « app.js » désigne l'interface dans son ensemble.
 - `src/` ne contient que les fichiers du build (+ le chargeur Node `engine.js`). Les scripts de développement sont dans `tools/` (voir `tools/README.md`) : `tools/sim/` (simulations Node du moteur, encore utilisables) et `tools/archive/` (anciens correctifs et brouillons, plus maintenus). Les scripts Node chargent le moteur avec `require('../../src/data.js'); require('../../src/talk.js'); const E=require('../../src/engine.js')` puis `E.newGame(seed)`.
 
 ## Couche française
@@ -72,7 +72,7 @@ Rien n'est importé : tout partage la portée globale du navigateur, l'ordre com
 
 ## Tests
 
-Le dossier `tests/` contient les vérifications (voir `tests/README.md`) : **`node tests/golden.js`** (golden master : doit afficher `OK` après toute refactorisation pure ; `record` seulement après un changement de gameplay voulu), `node tests/engine_smoke.js` (moteur), `node tests/endings_cov.js 600` (couverture des fins ; `NO_NPC=1` pour comparer sans les actes des PNJ), `python3 tests/ui_smoke.py en|fr` (navigateur : rencontres, encre, scènes de la famille et de révélation), `python3 tests/stress.py en|fr 1 4` (années complètes), `python3 tests/fr_miss.py` (chaînes sans traduction française), `python3 tests/phone_smoke.py en|fr`, `python3 tests/phone_games.py en|fr` (~40 s), `python3 tests/live_check.py en|fr`. Les tests navigateur demandent Playwright + Chromium (`CHROMIUM=/chemin` sinon). À lancer après `python3 build.py`. Mesure de référence (2 500 parties de bots) : 59/71 fins atteintes avec ou sans les actes des PNJ ; argent/POP/note moyens à ±1 point.
+Le dossier `tests/` contient les vérifications (voir `tests/README.md`) : **`node tests/golden.js`** (golden master : doit afficher `OK` après toute refactorisation pure ; `record` seulement après un changement de gameplay voulu), **`python tests/ui_snapshot.py`** (golden master de l'interface : 118 écrans EN/FR, ~80 s ; même règle pour `record`), `node tests/engine_smoke.js` (moteur), `node tests/endings_cov.js 600` (couverture des fins ; `NO_NPC=1` pour comparer sans les actes des PNJ), `python3 tests/ui_smoke.py en|fr` (navigateur : rencontres, encre, scènes de la famille et de révélation), `python3 tests/stress.py en|fr 1 4` (années complètes), `python3 tests/fr_miss.py` (chaînes sans traduction française), `python3 tests/phone_smoke.py en|fr`, `python3 tests/phone_games.py en|fr` (~40 s), `python3 tests/live_check.py en|fr`. Les tests navigateur demandent Playwright + Chromium (`CHROMIUM=/chemin` sinon). À lancer après `python3 build.py`. Mesure de référence (2 500 parties de bots) : 59/71 fins atteintes avec ou sans les actes des PNJ ; argent/POP/note moyens à ±1 point.
 
 ## Décisions
 
